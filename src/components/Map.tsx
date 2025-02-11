@@ -8,12 +8,14 @@ interface MapProps {
   stations: FuelStation[];
   routeCoordinates?: number[][];
   selectedStation?: FuelStation;
+  userLocation?: [number, number];
 }
 
-const Map = ({ stations, routeCoordinates, selectedStation }: MapProps) => {
+const Map = ({ stations, routeCoordinates, selectedStation, userLocation }: MapProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const markersRef = useRef<mapboxgl.Marker[]>([]);
+  const userMarkerRef = useRef<mapboxgl.Marker | null>(null);
 
   useEffect(() => {
     if (!mapContainer.current) return;
@@ -31,9 +33,71 @@ const Map = ({ stations, routeCoordinates, selectedStation }: MapProps) => {
 
     return () => {
       markersRef.current.forEach(marker => marker.remove());
+      userMarkerRef.current?.remove();
       map.current?.remove();
     };
   }, []);
+
+  // Update user location marker
+  useEffect(() => {
+    if (!map.current || !userLocation) return;
+
+    // Remove existing user marker
+    userMarkerRef.current?.remove();
+
+    // Create user location marker
+    const el = document.createElement('div');
+    el.className = 'user-marker';
+    el.style.width = '30px';
+    el.style.height = '30px';
+    el.style.backgroundColor = '#3B82F6'; // Blue color
+    el.style.border = '4px solid #1E40AF';
+    el.style.borderRadius = '50%';
+    el.style.boxShadow = '0 0 0 2px white, 0 0 10px rgba(59, 130, 246, 0.5)';
+    el.style.cursor = 'pointer';
+    el.style.position = 'relative';
+
+    // Add pulse animation
+    const pulse = document.createElement('div');
+    pulse.style.position = 'absolute';
+    pulse.style.inset = '-8px';
+    pulse.style.border = '4px solid #3B82F6';
+    pulse.style.borderRadius = '50%';
+    pulse.style.animation = 'pulse 2s ease-out infinite';
+    el.appendChild(pulse);
+
+    // Add pulse animation styles
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes pulse {
+        0% {
+          transform: scale(1);
+          opacity: 1;
+        }
+        100% {
+          transform: scale(2);
+          opacity: 0;
+        }
+      }
+    `;
+    document.head.appendChild(style);
+
+    userMarkerRef.current = new mapboxgl.Marker(el)
+      .setLngLat([userLocation[1], userLocation[0]])
+      .setPopup(new mapboxgl.Popup({ offset: 25 }).setHTML(
+        '<div class="p-2"><h3 class="font-bold">Tu ubicación</h3></div>'
+      ))
+      .addTo(map.current);
+
+    // Center map on user location if no route is displayed
+    if (!routeCoordinates) {
+      map.current.flyTo({
+        center: [userLocation[1], userLocation[0]],
+        zoom: 14,
+        duration: 1500
+      });
+    }
+  }, [userLocation]);
 
   // Update markers when stations or selected station changes
   useEffect(() => {
@@ -146,4 +210,3 @@ const Map = ({ stations, routeCoordinates, selectedStation }: MapProps) => {
 };
 
 export default Map;
-
