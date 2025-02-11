@@ -8,6 +8,7 @@ import { StationList } from "@/components/StationList";
 import { useGasStations } from "@/hooks/useGasStations";
 import { useLocationAndRoute } from "@/hooks/useLocationAndRoute";
 import { useStationFilters } from "@/hooks/useStationFilters";
+import { calculateDistance } from "@/lib/fuelApi";
 
 const Index = () => {
   const [origin, setOrigin] = useState("");
@@ -31,6 +32,7 @@ const Index = () => {
     setSelectedStation,
     handleGetUserLocation,
     handleStationClick,
+    setRouteCoordinates,
   } = useLocationAndRoute(setFilteredStations, stations);
 
   const {
@@ -139,3 +141,4 @@ const Index = () => {
 };
 
 export default Index;
+
