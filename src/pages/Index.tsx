@@ -92,9 +92,6 @@ const Index = () => {
   }, [selectedFuel]);
 
   useEffect(() => {
-    setRouteCoordinates(undefined);
-    setSelectedStation(undefined);
-    
     if (selectedBrand === "todas") return;
     
     setFilteredStations(prev => 
@@ -193,6 +190,7 @@ const Index = () => {
 
           setFilteredStations(filteredNearbyStations);
           setRouteCoordinates([[userLng, userLat]]);
+          setSelectedStation(undefined); // Solo reseteamos la selección cuando cambiamos de ubicación
           
           toast({
             title: "Ubicación encontrada",
@@ -381,3 +379,4 @@ const Index = () => {
 };
 
 export default Index;
+
