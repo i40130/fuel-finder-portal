@@ -28,33 +28,28 @@ export const useLocationAndRoute = (
           const userLng = position.coords.longitude;
           setUserLocation([userLat, userLng]);
           
+          // Filtrar estaciones por distancia
           const nearbyStations = stations.filter(station => {
             const stationLat = parseFloat(station.Latitud.replace(',', '.'));
             const stationLng = parseFloat(station['Longitud (WGS84)'].replace(',', '.'));
             const distance = calculateDistance(userLat, userLng, stationLat, stationLng);
             return distance <= 10;
-          }).sort((a, b) => {
-            const aLat = parseFloat(a.Latitud.replace(',', '.'));
-            const aLng = parseFloat(a['Longitud (WGS84)'].replace(',', '.'));
-            const bLat = parseFloat(b.Latitud.replace(',', '.'));
-            const bLng = parseFloat(b['Longitud (WGS84)'].replace(',', '.'));
-            
-            const distA = calculateDistance(userLat, userLng, aLat, aLng);
-            const distB = calculateDistance(userLat, userLng, bLat, bLng);
-            return distA - distB;
           });
 
-          const filteredNearbyStations = selectedBrand === "todas" 
+          // Filtrar por marca si es necesario
+          const filteredByBrand = selectedBrand === "todas" 
             ? nearbyStations 
-            : nearbyStations.filter(station => station.Rótulo === selectedBrand);
+            : nearbyStations.filter(station => 
+                station.Rótulo.toLowerCase().trim().includes(selectedBrand.toLowerCase().trim())
+              );
 
-          setFilteredStations(filteredNearbyStations);
+          setFilteredStations(filteredByBrand);
           setRouteCoordinates([[userLng, userLat]]);
           setSelectedStation(undefined);
           
           toast({
             title: "Ubicación encontrada",
-            description: `Se encontraron ${filteredNearbyStations.length} gasolineras en un radio de 10km`,
+            description: `Se encontraron ${filteredByBrand.length} gasolineras en un radio de 10km`,
           });
           setLoading(false);
         },
@@ -126,3 +121,4 @@ export const useLocationAndRoute = (
     handleStationClick,
   };
 };
+
