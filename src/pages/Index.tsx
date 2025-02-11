@@ -36,8 +36,8 @@ const Index = () => {
   const [userLocation, setUserLocation] = useState<[number, number]>();
   const { toast } = useToast();
 
-  // Get unique brands from stations
-  const uniqueBrands = Array.from(new Set(stations.map(station => station.Rótulo)))
+  // Get unique brands from filtered stations only
+  const uniqueBrands = Array.from(new Set(filteredStations.map(station => station.Rótulo)))
     .sort((a, b) => a.localeCompare(b));
 
   useEffect(() => {
@@ -63,6 +63,11 @@ const Index = () => {
 
     loadStations();
   }, [toast]);
+
+  // Reset selected brand when filtered stations change
+  useEffect(() => {
+    setSelectedBrand("todas");
+  }, [filteredStations]);
 
   // Apply brand filter to filtered stations
   useEffect(() => {
@@ -320,22 +325,24 @@ const Index = () => {
                 </SelectContent>
               </Select>
 
-              <Select
-                value={selectedBrand}
-                onValueChange={setSelectedBrand}
-              >
-                <SelectTrigger className="flex-1">
-                  <SelectValue placeholder="Filtrar por empresa" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todas">Todas las empresas</SelectItem>
-                  {uniqueBrands.map(brand => (
-                    <SelectItem key={brand} value={brand}>
-                      {brand}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {filteredStations.length > 0 && (
+                <Select
+                  value={selectedBrand}
+                  onValueChange={setSelectedBrand}
+                >
+                  <SelectTrigger className="flex-1">
+                    <SelectValue placeholder="Filtrar por empresa" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todas">Todas las empresas</SelectItem>
+                    {uniqueBrands.map(brand => (
+                      <SelectItem key={brand} value={brand}>
+                        {brand}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
 
               <Button
                 onClick={handleCalculateRoute}
