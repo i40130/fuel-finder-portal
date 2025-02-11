@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Search, MapPin, Fuel, Filter, Navigation } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -35,9 +36,36 @@ const Index = () => {
   const [userLocation, setUserLocation] = useState<[number, number]>();
   const { toast } = useToast();
 
-  // Get unique brands from filtered stations only
-  const uniqueBrands = Array.from(new Set(filteredStations.map(station => station.Rótulo)))
-    .sort((a, b) => a.localeCompare(b));
+  // Get unique brands from stations that are either near the route or user location
+  const getAvailableBrands = () => {
+    const availableStations = stations.filter(station => {
+      const stationLat = parseFloat(station.Latitud.replace(',', '.'));
+      const stationLng = parseFloat(station['Longitud (WGS84)'].replace(',', '.'));
+
+      if (routeCoordinates) {
+        return routeCoordinates.some(point => {
+          const distance = calculateDistance(
+            stationLat,
+            stationLng,
+            point[1],
+            point[0]
+          );
+          return distance <= 5;
+        });
+      } else if (userLocation) {
+        const [userLat, userLng] = userLocation;
+        const distance = calculateDistance(userLat, userLng, stationLat, stationLng);
+        return distance <= 10;
+      }
+      return false;
+    });
+
+    return Array.from(new Set(availableStations.map(station => station.Rótulo)))
+      .sort((a, b) => a.localeCompare(b));
+  };
+
+  // Get unique brands that are currently available
+  const uniqueBrands = getAvailableBrands();
 
   useEffect(() => {
     const loadStations = async () => {
@@ -349,7 +377,7 @@ const Index = () => {
                 </SelectContent>
               </Select>
 
-              {filteredStations.length > 0 && (
+              {(userLocation || routeCoordinates) && (
                 <Select
                   value={selectedBrand}
                   onValueChange={setSelectedBrand}
