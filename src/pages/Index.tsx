@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Search, MapPin, Fuel, Filter, Navigation } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -74,9 +73,34 @@ const Index = () => {
     if (selectedBrand === "todas") return;
     
     setFilteredStations(prev => 
-      prev.filter(station => station.Rótulo === selectedBrand)
+      stations.filter(station => {
+        // Si hay una ruta calculada, filtramos por cercanía a la ruta
+        if (routeCoordinates) {
+          const stationLat = parseFloat(station.Latitud.replace(',', '.'));
+          const stationLng = parseFloat(station['Longitud (WGS84)'].replace(',', '.'));
+          
+          return routeCoordinates.some(point => {
+            const distance = calculateDistance(
+              stationLat,
+              stationLng,
+              point[1],
+              point[0]
+            );
+            return distance <= 5 && station.Rótulo === selectedBrand;
+          });
+        }
+        // Si estamos usando ubicación del usuario, filtramos por cercanía al usuario
+        else if (userLocation) {
+          const [userLat, userLng] = userLocation;
+          const stationLat = parseFloat(station.Latitud.replace(',', '.'));
+          const stationLng = parseFloat(station['Longitud (WGS84)'].replace(',', '.'));
+          const distance = calculateDistance(userLat, userLng, stationLat, stationLng);
+          return distance <= 10 && station.Rótulo === selectedBrand;
+        }
+        return false;
+      })
     );
-  }, [selectedBrand]);
+  }, [selectedBrand, stations, routeCoordinates, userLocation]);
 
   const handleCalculateRoute = async () => {
     if (!origin || !destination) {
@@ -128,7 +152,7 @@ const Index = () => {
           const aLng = parseFloat(a['Longitud (WGS84)'].replace(',', '.'));
           const bLat = parseFloat(b.Latitud.replace(',', '.'));
           const bLng = parseFloat(b['Longitud (WGS84)'].replace(',', '.'));
-
+          
           const aMinDist = Math.min(...route.map(point => 
             calculateDistance(aLat, aLng, point[1], point[0])));
           const bMinDist = Math.min(...route.map(point => 
@@ -448,4 +472,3 @@ const Index = () => {
 };
 
 export default Index;
-
