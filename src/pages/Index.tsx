@@ -8,7 +8,7 @@ import { StationList } from "@/components/StationList";
 import { useGasStations } from "@/hooks/useGasStations";
 import { useLocationAndRoute } from "@/hooks/useLocationAndRoute";
 import { useStationFilters } from "@/hooks/useStationFilters";
-import { calculateDistance } from "@/lib/fuelApi";
+import { calculateDistance, getFuelPrice } from "@/lib/fuelApi";
 
 const Index = () => {
   const [origin, setOrigin] = useState("");
@@ -41,7 +41,7 @@ const Index = () => {
     findNearestStation,
   } = useStationFilters(userLocation, filteredStations, setSelectedStation, setRouteCoordinates);
 
-  // Efecto para actualizar las estaciones cuando cambia la marca seleccionada
+  // Efecto para actualizar las estaciones cuando cambian los filtros
   useEffect(() => {
     if (!stations.length) return;
 
@@ -53,6 +53,7 @@ const Index = () => {
     
     let filtered = stations;
 
+    // Primero filtramos por ubicación
     if (routeCoordinates) {
       filtered = stations.filter(station => {
         const stationLat = parseFloat(station.Latitud.replace(',', '.'));
@@ -78,13 +79,21 @@ const Index = () => {
       });
     }
 
-    // Aplicar filtro por marca solo si no es "todas"
+    // Luego filtramos por marca si es necesario
     if (selectedBrand !== "todas") {
-      filtered = filtered.filter(station => station.Rótulo.toLowerCase() === selectedBrand.toLowerCase());
+      filtered = filtered.filter(station => 
+        station.Rótulo.toLowerCase() === selectedBrand.toLowerCase()
+      );
     }
 
+    // Finalmente filtramos por combustible disponible
+    filtered = filtered.filter(station => {
+      const price = getFuelPrice(station, selectedFuel);
+      return price !== "No disponible";
+    });
+
     setFilteredStations(filtered);
-  }, [selectedBrand, stations, routeCoordinates, userLocation, setFilteredStations]);
+  }, [selectedBrand, selectedFuel, stations, routeCoordinates, userLocation, setFilteredStations]);
 
   const uniqueBrands = getAvailableBrands(routeCoordinates, userLocation);
 
