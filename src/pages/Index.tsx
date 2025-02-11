@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Search, MapPin, Fuel, Filter } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -21,6 +20,7 @@ import {
   getCheapestStationInRadius,
   geocodeCity,
   getRoute,
+  calculateDistance,
   type FuelStation,
 } from "@/lib/fuelApi";
 
