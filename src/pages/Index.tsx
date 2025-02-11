@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { Search, MapPin, Fuel, Filter } from "lucide-react";
+import { Search, MapPin, Fuel, Filter, Navigation } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,8 +17,6 @@ import {
   fetchFuelStations,
   filterStations,
   getFuelPrice,
-  getNearestStation,
-  getCheapestStationInRadius,
   geocodeCity,
   getRoute,
   calculateDistance,
@@ -111,7 +109,6 @@ const Index = () => {
           const bLat = parseFloat(b.Latitud.replace(',', '.'));
           const bLng = parseFloat(b['Longitud (WGS84)'].replace(',', '.'));
 
-          // Find closest point on route for each station
           const aMinDist = Math.min(...route.map(point => 
             calculateDistance(aLat, aLng, point[1], point[0])));
           const bMinDist = Math.min(...route.map(point => 
@@ -132,6 +129,7 @@ const Index = () => {
         description: "Error al calcular la ruta",
         variant: "destructive",
       });
+      console.error('Error calculating route:', error);
     } finally {
       setLoading(false);
     }
@@ -139,6 +137,59 @@ const Index = () => {
 
   const handleStationClick = (station: FuelStation) => {
     setSelectedStation(station);
+  };
+
+  const handleGetUserLocation = () => {
+    setLoading(true);
+    if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const userLat = position.coords.latitude;
+          const userLng = position.coords.longitude;
+          
+          const nearbyStations = stations.filter(station => {
+            const stationLat = parseFloat(station.Latitud.replace(',', '.'));
+            const stationLng = parseFloat(station['Longitud (WGS84)'].replace(',', '.'));
+            const distance = calculateDistance(userLat, userLng, stationLat, stationLng);
+            return distance <= 10; // 10km radius
+          }).sort((a, b) => {
+            const aLat = parseFloat(a.Latitud.replace(',', '.'));
+            const aLng = parseFloat(a['Longitud (WGS84)'].replace(',', '.'));
+            const bLat = parseFloat(b.Latitud.replace(',', '.'));
+            const bLng = parseFloat(b['Longitud (WGS84)'].replace(',', '.'));
+            
+            const distA = calculateDistance(userLat, userLng, aLat, aLng);
+            const distB = calculateDistance(userLat, userLng, bLat, bLng);
+            return distA - distB;
+          });
+
+          setFilteredStations(nearbyStations);
+          setRouteCoordinates([[userLng, userLat]]); // Center map on user location
+          
+          toast({
+            title: "Ubicación encontrada",
+            description: `Se encontraron ${nearbyStations.length} gasolineras en un radio de 10km`,
+          });
+          setLoading(false);
+        },
+        (error) => {
+          console.error("Error getting location:", error);
+          toast({
+            title: "Error",
+            description: "No se pudo obtener tu ubicación. Por favor, verifica los permisos de ubicación.",
+            variant: "destructive",
+          });
+          setLoading(false);
+        }
+      );
+    } else {
+      toast({
+        title: "Error",
+        description: "Tu navegador no soporta geolocalización",
+        variant: "destructive",
+      });
+      setLoading(false);
+    }
   };
 
   return (
@@ -202,6 +253,14 @@ const Index = () => {
               >
                 <MapPin className="mr-2 h-4 w-4" />
                 Calcular Ruta
+              </Button>
+              <Button
+                onClick={handleGetUserLocation}
+                className="flex-1 bg-green-500 hover:bg-green-600 text-white"
+                disabled={loading}
+              >
+                <Navigation className="mr-2 h-4 w-4" />
+                Usar mi ubicación
               </Button>
             </div>
           </div>
