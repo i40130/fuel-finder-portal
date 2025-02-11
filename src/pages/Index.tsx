@@ -1,26 +1,19 @@
+
 import { useState, useEffect } from "react";
-import { Search, MapPin, Fuel, Filter, Navigation } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import Map from "@/components/Map";
 import {
   fetchFuelStations,
   filterStations,
-  getFuelPrice,
-  geocodeCity,
   getRoute,
   calculateDistance,
+  getFuelPrice,
   type FuelStation,
 } from "@/lib/fuelApi";
+import { SearchForm } from "@/components/SearchForm";
+import { FilterButtons } from "@/components/FilterButtons";
+import { StationList } from "@/components/StationList";
 
 const Index = () => {
   const [origin, setOrigin] = useState("");
@@ -117,7 +110,7 @@ const Index = () => {
               point[1],
               point[0]
             );
-            return distance <= 5; // 5km radius
+            return distance <= 5;
           });
         }
         else if (userLocation) {
@@ -132,84 +125,6 @@ const Index = () => {
     );
   }, [selectedBrand, stations, routeCoordinates, userLocation]);
 
-  const handleCalculateRoute = async () => {
-    if (!origin || !destination) {
-      toast({
-        title: "Error",
-        description: "Por favor, introduce origen y destino",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const originCoords = await geocodeCity(origin);
-      const destCoords = await geocodeCity(destination);
-
-      if (!originCoords || !destCoords) {
-        toast({
-          title: "Error",
-          description: "No se pudieron encontrar las coordenadas de las ciudades",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      const route = await getRoute(originCoords, destCoords);
-      if (route) {
-        setRouteCoordinates(route);
-        const routeStations = stations.filter(station => {
-          const stationLat = parseFloat(station.Latitud.replace(',', '.'));
-          const stationLng = parseFloat(station['Longitud (WGS84)'].replace(',', '.'));
-          
-          return route.some(point => {
-            const distance = calculateDistance(
-              stationLat,
-              stationLng,
-              point[1],
-              point[0]
-            );
-            return distance <= 5; // 5km radius
-          });
-        });
-
-        const sortedStations = routeStations.sort((a, b) => {
-          const aLat = parseFloat(a.Latitud.replace(',', '.'));
-          const aLng = parseFloat(a['Longitud (WGS84)'].replace(',', '.'));
-          const bLat = parseFloat(b.Latitud.replace(',', '.'));
-          const bLng = parseFloat(b['Longitud (WGS84)'].replace(',', '.'));
-          
-          const aMinDist = Math.min(...route.map(point => 
-            calculateDistance(aLat, aLng, point[1], point[0])));
-          const bMinDist = Math.min(...route.map(point => 
-            calculateDistance(bLat, bLng, point[1], point[0])));
-
-          return aMinDist - bMinDist;
-        });
-        
-        const finalStations = selectedBrand === "todas" 
-          ? sortedStations 
-          : sortedStations.filter(station => station.Rótulo === selectedBrand);
-
-        setFilteredStations(finalStations);
-        toast({
-          title: "Ruta calculada",
-          description: `Se encontraron ${finalStations.length} gasolineras cerca de la ruta`,
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Error al calcular la ruta",
-        variant: "destructive",
-      });
-      console.error('Error calculating route:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleStationClick = async (station: FuelStation) => {
     setSelectedStation(station);
     
@@ -219,8 +134,8 @@ const Index = () => {
       
       try {
         const route = await getRoute(
-          [userLocation[1], userLocation[0]], // [lng, lat] para el origen
-          [stationLng, stationLat] // [lng, lat] para el destino
+          [userLocation[1], userLocation[0]],
+          [stationLng, stationLat]
         );
         
         if (route) {
@@ -260,7 +175,7 @@ const Index = () => {
             const stationLat = parseFloat(station.Latitud.replace(',', '.'));
             const stationLng = parseFloat(station['Longitud (WGS84)'].replace(',', '.'));
             const distance = calculateDistance(userLat, userLng, stationLat, stationLng);
-            return distance <= 10; // 10km radius
+            return distance <= 10;
           }).sort((a, b) => {
             const aLat = parseFloat(a.Latitud.replace(',', '.'));
             const aLng = parseFloat(a['Longitud (WGS84)'].replace(',', '.'));
@@ -277,7 +192,7 @@ const Index = () => {
             : nearbyStations.filter(station => station.Rótulo === selectedBrand);
 
           setFilteredStations(filteredNearbyStations);
-          setRouteCoordinates([[userLng, userLat]]); // Center map on user location
+          setRouteCoordinates([[userLng, userLat]]);
           
           toast({
             title: "Ubicación encontrada",
@@ -330,8 +245,8 @@ const Index = () => {
 
     try {
       const route = await getRoute(
-        [userLng, userLat], // [lng, lat] para el origen
-        [stationLng, stationLat] // [lng, lat] para el destino
+        [userLng, userLat],
+        [stationLng, stationLat]
       );
       
       if (route) {
@@ -363,7 +278,6 @@ const Index = () => {
 
     const [userLat, userLng] = userLocation;
     
-    // Find nearest station by calculating actual distances
     const nearestStation = filteredStations.reduce((nearest, current) => {
       const nearestLat = parseFloat(nearest.Latitud.replace(',', '.'));
       const nearestLng = parseFloat(nearest['Longitud (WGS84)'].replace(',', '.'));
@@ -379,16 +293,14 @@ const Index = () => {
     setSelectedStation(nearestStation);
     setActiveFilter("nearest");
     
-    // Calculate distance for the toast message
     const stationLat = parseFloat(nearestStation.Latitud.replace(',', '.'));
     const stationLng = parseFloat(nearestStation['Longitud (WGS84)'].replace(',', '.'));
     const distance = calculateDistance(userLat, userLng, stationLat, stationLng);
 
-    // Calculate route to the nearest station
     try {
       const route = await getRoute(
-        [userLng, userLat], // [lng, lat] para el origen
-        [stationLng, stationLat] // [lng, lat] para el destino
+        [userLng, userLat],
+        [stationLng, stationLat]
       );
       
       if (route) {
@@ -421,113 +333,33 @@ const Index = () => {
         </div>
 
         <Card className="p-6 shadow-lg bg-white/80 backdrop-blur-sm mb-8">
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">
-                  Ciudad de origen
-                </label>
-                <Input
-                  type="text"
-                  value={origin}
-                  onChange={(e) => setOrigin(e.target.value)}
-                  placeholder="Ej: Madrid"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">
-                  Ciudad de destino
-                </label>
-                <Input
-                  type="text"
-                  value={destination}
-                  onChange={(e) => setDestination(e.target.value)}
-                  placeholder="Ej: Barcelona"
-                />
-              </div>
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-4">
-              <Select
-                value={selectedFuel}
-                onValueChange={(value) => setSelectedFuel(value)}
-              >
-                <SelectTrigger className="flex-1">
-                  <SelectValue placeholder="Tipo de combustible" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="gasolina95">Gasolina 95</SelectItem>
-                  <SelectItem value="gasolina98">Gasolina 98</SelectItem>
-                  <SelectItem value="diesel">Diésel</SelectItem>
-                  <SelectItem value="dieselplus">Diésel Plus</SelectItem>
-                </SelectContent>
-              </Select>
-
-              {(userLocation || routeCoordinates) && (
-                <Select
-                  value={selectedBrand}
-                  onValueChange={setSelectedBrand}
-                >
-                  <SelectTrigger className="flex-1">
-                    <SelectValue placeholder="Filtrar por empresa" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="todas">Todas las empresas</SelectItem>
-                    {uniqueBrands.map(brand => (
-                      <SelectItem key={brand} value={brand}>
-                        {brand}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-
-              <Button
-                onClick={handleCalculateRoute}
-                className="flex-1 bg-blue-500 hover:bg-blue-600 text-white"
-                disabled={loading || !origin || !destination}
-              >
-                <MapPin className="mr-2 h-4 w-4" />
-                Calcular Ruta
-              </Button>
-              <Button
-                onClick={handleGetUserLocation}
-                className="flex-1 bg-green-500 hover:bg-green-600 text-white"
-                disabled={loading}
-              >
-                <Navigation className="mr-2 h-4 w-4" />
-                Usar mi ubicación
-              </Button>
-            </div>
-            {userLocation && (
-              <div className="flex flex-col sm:flex-row gap-4">
-                <Button
-                  onClick={findCheapestStation}
-                  className={`flex-1 ${
-                    activeFilter === "cheapest"
-                      ? "bg-yellow-600 hover:bg-yellow-700"
-                      : "bg-yellow-500 hover:bg-yellow-600"
-                  } text-white`}
-                  disabled={loading || !filteredStations.length}
-                >
-                  <Fuel className="mr-2 h-4 w-4" />
-                  Encontrar la más barata
-                </Button>
-                <Button
-                  onClick={findNearestStation}
-                  className={`flex-1 ${
-                    activeFilter === "nearest"
-                      ? "bg-purple-600 hover:bg-purple-700"
-                      : "bg-purple-500 hover:bg-purple-600"
-                  } text-white`}
-                  disabled={loading || !filteredStations.length}
-                >
-                  <MapPin className="mr-2 h-4 w-4" />
-                  Encontrar la más cercana
-                </Button>
-              </div>
-            )}
-          </div>
+          <SearchForm
+            origin={origin}
+            setOrigin={setOrigin}
+            destination={destination}
+            setDestination={setDestination}
+            selectedFuel={selectedFuel}
+            setSelectedFuel={setSelectedFuel}
+            selectedBrand={selectedBrand}
+            setSelectedBrand={setSelectedBrand}
+            loading={loading}
+            setLoading={setLoading}
+            stations={stations}
+            setFilteredStations={setFilteredStations}
+            setRouteCoordinates={setRouteCoordinates}
+            uniqueBrands={uniqueBrands}
+            handleGetUserLocation={handleGetUserLocation}
+            userLocation={userLocation}
+            routeCoordinates={routeCoordinates}
+          />
+          <FilterButtons
+            userLocation={userLocation}
+            loading={loading}
+            filteredStations={filteredStations}
+            findCheapestStation={findCheapestStation}
+            findNearestStation={findNearestStation}
+            activeFilter={activeFilter}
+          />
         </Card>
 
         <Map 
@@ -537,57 +369,12 @@ const Index = () => {
           userLocation={userLocation}
         />
 
-        <div className="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredStations.map((station) => (
-            <Card
-              key={station.IDEESS}
-              className={`p-6 transition-all duration-300 cursor-pointer ${
-                selectedStation?.IDEESS === station.IDEESS 
-                  ? 'ring-2 ring-green-500 shadow-xl bg-green-50 scale-105' 
-                  : 'hover:shadow-lg hover:scale-102'
-              }`}
-              onClick={() => handleStationClick(station)}
-            >
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <h3 className={`font-semibold text-lg ${
-                    selectedStation?.IDEESS === station.IDEESS 
-                      ? 'text-green-700' 
-                      : ''
-                  }`}>
-                    {station.Rótulo}
-                  </h3>
-                </div>
-                <Fuel className={`h-6 w-6 ${
-                  selectedStation?.IDEESS === station.IDEESS 
-                    ? 'text-green-500' 
-                    : 'text-teal-500'
-                }`} />
-              </div>
-              <div className="space-y-2">
-                <p className="text-sm text-gray-600">
-                  <span className="font-medium">
-                    {selectedFuel === "gasolina95"
-                      ? "Gasolina 95"
-                      : selectedFuel === "gasolina98"
-                      ? "Gasolina 98"
-                      : selectedFuel === "diesel"
-                      ? "Diésel"
-                      : "Diésel Plus"}
-                    :
-                  </span>{" "}
-                  {getFuelPrice(station, selectedFuel)} €/L
-                </p>
-                <p className="text-sm text-gray-600 truncate">
-                  {station.Dirección}, {station.Municipio}
-                </p>
-                <p className="text-sm text-gray-600">
-                  Horario: {station.Horario}
-                </p>
-              </div>
-            </Card>
-          ))}
-        </div>
+        <StationList
+          filteredStations={filteredStations}
+          selectedFuel={selectedFuel}
+          selectedStation={selectedStation}
+          onStationClick={handleStationClick}
+        />
       </div>
     </div>
   );
