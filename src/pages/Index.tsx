@@ -93,6 +93,14 @@ const Index = () => {
   }, [filteredStations]);
 
   useEffect(() => {
+    setRouteCoordinates(undefined);
+    setSelectedStation(undefined);
+  }, [selectedFuel]);
+
+  useEffect(() => {
+    setRouteCoordinates(undefined);
+    setSelectedStation(undefined);
+    
     if (selectedBrand === "todas") return;
     
     setFilteredStations(prev => 
