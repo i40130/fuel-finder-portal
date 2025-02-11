@@ -305,7 +305,7 @@ const Index = () => {
     }
   };
 
-  const findCheapestStation = () => {
+  const findCheapestStation = async () => {
     if (!filteredStations.length || !userLocation) {
       toast({
         title: "Error",
@@ -323,10 +323,32 @@ const Index = () => {
 
     setSelectedStation(cheapestStation);
     setActiveFilter("cheapest");
-    toast({
-      title: "Gasolinera más barata encontrada",
-      description: `${cheapestStation.Rótulo} - ${getFuelPrice(cheapestStation, selectedFuel)}€/L`,
-    });
+
+    const [userLat, userLng] = userLocation;
+    const stationLat = parseFloat(cheapestStation.Latitud.replace(',', '.'));
+    const stationLng = parseFloat(cheapestStation['Longitud (WGS84)'].replace(',', '.'));
+
+    try {
+      const route = await getRoute(
+        [userLng, userLat], // [lng, lat] para el origen
+        [stationLng, stationLat] // [lng, lat] para el destino
+      );
+      
+      if (route) {
+        setRouteCoordinates(route);
+        toast({
+          title: "Gasolinera más barata encontrada",
+          description: `${cheapestStation.Rótulo} - ${getFuelPrice(cheapestStation, selectedFuel)}€/L`,
+        });
+      }
+    } catch (error) {
+      console.error('Error calculating route:', error);
+      toast({
+        title: "Error",
+        description: "No se pudo calcular la ruta hasta la gasolinera más barata",
+        variant: "destructive",
+      });
+    }
   };
 
   const findNearestStation = async () => {
