@@ -16,6 +16,8 @@ import {
   fetchFuelStations,
   filterStations,
   getFuelPrice,
+  getNearestStation,
+  getCheapestStationInRadius,
   type FuelStation,
 } from "@/lib/fuelApi";
 
@@ -25,6 +27,8 @@ const Index = () => {
   const [stations, setStations] = useState<FuelStation[]>([]);
   const [filteredStations, setFilteredStations] = useState<FuelStation[]>([]);
   const [selectedFuel, setSelectedFuel] = useState("gasolina95");
+  const [nearestStation, setNearestStation] = useState<FuelStation | null>(null);
+  const [cheapestStation, setCheapestStation] = useState<FuelStation | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -94,6 +98,61 @@ const Index = () => {
         title: "Geolocalización no soportada",
         description: "Tu navegador no soporta geolocalización",
         variant: "destructive",
+      });
+    }
+  };
+
+  const handleFindNearest = () => {
+    if (!location.lat || !location.lng) {
+      toast({
+        title: "Error",
+        description: "Por favor, primero establece tu ubicación",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const nearest = getNearestStation(
+      stations,
+      parseFloat(location.lat),
+      parseFloat(location.lng)
+    );
+    setNearestStation(nearest);
+
+    if (nearest) {
+      toast({
+        title: "Gasolinera más cercana encontrada",
+        description: `${nearest.Rótulo} a ${nearest.distance?.toFixed(2)} km`,
+      });
+    }
+  };
+
+  const handleFindCheapest = () => {
+    if (!location.lat || !location.lng) {
+      toast({
+        title: "Error",
+        description: "Por favor, primero establece tu ubicación",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const cheapest = getCheapestStationInRadius(
+      stations,
+      parseFloat(location.lat),
+      parseFloat(location.lng),
+      selectedFuel,
+      10 // Radio de 10km
+    );
+    setCheapestStation(cheapest);
+
+    if (cheapest) {
+      toast({
+        title: "Gasolinera más barata encontrada",
+        description: `${cheapest.Rótulo} a ${cheapest.distance?.toFixed(2)} km - Precio: ${getFuelPrice(
+          cheapest,
+          selectedFuel
+        )} €/L`,
       });
     }
   };
@@ -184,10 +243,111 @@ const Index = () => {
                 Más filtros
               </Button>
             </div>
+
+            <div className="flex flex-col sm:flex-row gap-4">
+              <Button
+                onClick={handleFindNearest}
+                className="flex-1 bg-blue-500 hover:bg-blue-600 text-white"
+                disabled={!location.lat || !location.lng}
+              >
+                <MapPin className="mr-2 h-4 w-4" />
+                Encontrar la más cercana
+              </Button>
+              <Button
+                onClick={handleFindCheapest}
+                className="flex-1 bg-green-500 hover:bg-green-600 text-white"
+                disabled={!location.lat || !location.lng}
+              >
+                <Fuel className="mr-2 h-4 w-4" />
+                Encontrar la más barata (10km)
+              </Button>
+            </div>
           </div>
         </Card>
 
         <div className="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {nearestStation && (
+            <Card className="p-6 hover:shadow-lg transition-shadow duration-200 border-blue-500 border-2">
+              <div className="flex justify-between items-start mb-4">
+                <div>
+                  <h3 className="font-semibold text-lg text-blue-600">
+                    Gasolinera más cercana
+                  </h3>
+                  <p className="text-sm text-gray-600">
+                    {nearestStation.Rótulo}
+                  </p>
+                </div>
+                <MapPin className="h-6 w-6 text-blue-500" />
+              </div>
+              <div className="space-y-2">
+                <p className="text-sm text-gray-600">
+                  <span className="font-medium">Distancia:</span>{" "}
+                  {nearestStation.distance?.toFixed(2)} km
+                </p>
+                <p className="text-sm text-gray-600">
+                  <span className="font-medium">
+                    {selectedFuel === "gasolina95"
+                      ? "Gasolina 95"
+                      : selectedFuel === "gasolina98"
+                      ? "Gasolina 98"
+                      : selectedFuel === "diesel"
+                      ? "Diésel"
+                      : "Diésel Plus"}
+                    :
+                  </span>{" "}
+                  {getFuelPrice(nearestStation, selectedFuel)} €/L
+                </p>
+                <p className="text-sm text-gray-600 truncate">
+                  {nearestStation.Dirección}, {nearestStation.Municipio}
+                </p>
+                <p className="text-sm text-gray-600">
+                  Horario: {nearestStation.Horario}
+                </p>
+              </div>
+            </Card>
+          )}
+
+          {cheapestStation && (
+            <Card className="p-6 hover:shadow-lg transition-shadow duration-200 border-green-500 border-2">
+              <div className="flex justify-between items-start mb-4">
+                <div>
+                  <h3 className="font-semibold text-lg text-green-600">
+                    Gasolinera más barata (10km)
+                  </h3>
+                  <p className="text-sm text-gray-600">
+                    {cheapestStation.Rótulo}
+                  </p>
+                </div>
+                <Fuel className="h-6 w-6 text-green-500" />
+              </div>
+              <div className="space-y-2">
+                <p className="text-sm text-gray-600">
+                  <span className="font-medium">Distancia:</span>{" "}
+                  {cheapestStation.distance?.toFixed(2)} km
+                </p>
+                <p className="text-sm text-gray-600">
+                  <span className="font-medium">
+                    {selectedFuel === "gasolina95"
+                      ? "Gasolina 95"
+                      : selectedFuel === "gasolina98"
+                      ? "Gasolina 98"
+                      : selectedFuel === "diesel"
+                      ? "Diésel"
+                      : "Diésel Plus"}
+                    :
+                  </span>{" "}
+                  {getFuelPrice(cheapestStation, selectedFuel)} €/L
+                </p>
+                <p className="text-sm text-gray-600 truncate">
+                  {cheapestStation.Dirección}, {cheapestStation.Municipio}
+                </p>
+                <p className="text-sm text-gray-600">
+                  Horario: {cheapestStation.Horario}
+                </p>
+              </div>
+            </Card>
+          )}
+
           {filteredStations.map((station) => (
             <Card
               key={station.IDEESS}
