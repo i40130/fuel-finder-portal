@@ -18,7 +18,7 @@ const Map = ({ stations, routeCoordinates, selectedStation, userLocation }: MapP
   const userMarkerRef = useRef<mapboxgl.Marker | null>(null);
 
   useEffect(() => {
-    if (!mapContainer.current) return;
+    if (!mapContainer.current || map.current) return;
 
     mapboxgl.accessToken = 'pk.eyJ1IjoianVhbmJhLWVzY3JpZyIsImEiOiJjbTcwYnJvOTcwMGQ1MmlzN2R4bzh4eXRhIn0.77pvZCAPAEWReY12K0mBPg';
     
@@ -26,10 +26,21 @@ const Map = ({ stations, routeCoordinates, selectedStation, userLocation }: MapP
       container: mapContainer.current,
       style: 'mapbox://styles/mapbox/streets-v12',
       center: [-3.70325, 40.4167], // Madrid by default
-      zoom: 5
+      zoom: 5,
+      minZoom: 3,
     });
 
     map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
+
+    // Aseguramos que el mapa se cargue correctamente
+    map.current.on('load', () => {
+      console.log('Map loaded successfully');
+    });
+
+    // Manejamos errores de carga del mapa
+    map.current.on('error', (e) => {
+      console.error('Map error:', e);
+    });
 
     return () => {
       markersRef.current.forEach(marker => marker.remove());
@@ -203,7 +214,7 @@ const Map = ({ stations, routeCoordinates, selectedStation, userLocation }: MapP
   }, [routeCoordinates]);
 
   return (
-    <div className="w-full h-[500px] rounded-lg overflow-hidden shadow-lg">
+    <div className="w-full h-[500px] rounded-lg overflow-hidden shadow-lg bg-white">
       <div ref={mapContainer} className="w-full h-full" />
     </div>
   );
