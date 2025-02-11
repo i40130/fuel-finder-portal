@@ -2,7 +2,6 @@
 import { Fuel } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { getFuelPrice, type FuelStation } from "@/lib/fuelApi";
-import { useEffect, useState } from "react";
 
 interface StationListProps {
   filteredStations: FuelStation[];
@@ -17,23 +16,10 @@ export function StationList({
   selectedStation,
   onStationClick,
 }: StationListProps) {
-  // Mantener un estado local para la selección que persista
-  const [localSelectedStation, setLocalSelectedStation] = useState<FuelStation | undefined>(selectedStation);
-
-  // Actualizar el estado local cuando cambia la selección externa
-  useEffect(() => {
-    setLocalSelectedStation(selectedStation);
-  }, [selectedStation]);
-
-  const handleStationClick = (station: FuelStation) => {
-    setLocalSelectedStation(station);
-    onStationClick(station);
-  };
-
   return (
     <div className="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {filteredStations.map((station) => {
-        const isSelected = localSelectedStation?.IDEESS === station.IDEESS;
+        const isSelected = selectedStation?.IDEESS === station.IDEESS;
         
         return (
           <Card
@@ -43,7 +29,7 @@ export function StationList({
                 ? 'ring-2 ring-green-500 shadow-xl bg-green-50 scale-105' 
                 : 'hover:shadow-lg hover:scale-102'
             }`}
-            onClick={() => handleStationClick(station)}
+            onClick={() => onStationClick(station)}
           >
             <div className="flex justify-between items-start mb-4">
               <div>
