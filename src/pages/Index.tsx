@@ -12,11 +12,56 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import {
+  fetchFuelStations,
+  filterStations,
+  getFuelPrice,
+  type FuelStation,
+} from "@/lib/fuelApi";
 
 const Index = () => {
   const [location, setLocation] = useState({ lat: "", lng: "" });
   const [loading, setLoading] = useState(false);
+  const [stations, setStations] = useState<FuelStation[]>([]);
+  const [filteredStations, setFilteredStations] = useState<FuelStation[]>([]);
+  const [selectedFuel, setSelectedFuel] = useState("gasolina95");
   const { toast } = useToast();
+
+  useEffect(() => {
+    const loadStations = async () => {
+      setLoading(true);
+      try {
+        const data = await fetchFuelStations();
+        setStations(data);
+        toast({
+          title: "Datos actualizados",
+          description: `Se han cargado ${data.length} estaciones de servicio`,
+        });
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "No se pudieron cargar los datos de las estaciones",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadStations();
+  }, [toast]);
+
+  useEffect(() => {
+    if (location.lat && location.lng && stations.length > 0) {
+      const filtered = filterStations(
+        stations,
+        parseFloat(location.lat),
+        parseFloat(location.lng),
+        selectedFuel
+      );
+      setFilteredStations(filtered);
+    }
+  }, [location, selectedFuel, stations]);
 
   const handleGeolocation = () => {
     setLoading(true);
@@ -61,7 +106,8 @@ const Index = () => {
             Buscador de Gasolineras
           </h1>
           <p className="text-gray-600 max-w-2xl mx-auto">
-            Encuentra las gasolineras más cercanas y compara precios de combustible en tiempo real
+            Encuentra las gasolineras más cercanas y compara precios de combustible
+            en tiempo real
           </p>
         </div>
 
@@ -69,7 +115,9 @@ const Index = () => {
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">Latitud</label>
+                <label className="text-sm font-medium text-gray-700">
+                  Latitud
+                </label>
                 <div className="relative">
                   <Input
                     type="text"
@@ -84,7 +132,9 @@ const Index = () => {
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">Longitud</label>
+                <label className="text-sm font-medium text-gray-700">
+                  Longitud
+                </label>
                 <div className="relative">
                   <Input
                     type="text"
@@ -115,7 +165,10 @@ const Index = () => {
                   </>
                 )}
               </Button>
-              <Select>
+              <Select
+                value={selectedFuel}
+                onValueChange={(value) => setSelectedFuel(value)}
+              >
                 <SelectTrigger className="flex-1">
                   <SelectValue placeholder="Tipo de combustible" />
                 </SelectTrigger>
@@ -135,28 +188,39 @@ const Index = () => {
         </Card>
 
         <div className="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {/* Placeholder para las estaciones */}
-          {[1, 2, 3].map((i) => (
+          {filteredStations.map((station) => (
             <Card
-              key={i}
-              className="p-6 hover:shadow-lg transition-shadow duration-200 cursor-pointer"
+              key={station.IDEESS}
+              className="p-6 hover:shadow-lg transition-shadow duration-200"
             >
               <div className="flex justify-between items-start mb-4">
                 <div>
-                  <h3 className="font-semibold text-lg">Estación {i}</h3>
-                  <p className="text-sm text-gray-600">A 2.{i} km de distancia</p>
+                  <h3 className="font-semibold text-lg">{station.Rótulo}</h3>
+                  <p className="text-sm text-gray-600">
+                    A {station.distance?.toFixed(2)} km de distancia
+                  </p>
                 </div>
                 <Fuel className="h-6 w-6 text-teal-500" />
               </div>
               <div className="space-y-2">
                 <p className="text-sm text-gray-600">
-                  <span className="font-medium">Gasolina 95:</span> 1.{i}99 €/L
-                </p>
-                <p className="text-sm text-gray-600">
-                  <span className="font-medium">Diésel:</span> 1.{i}79 €/L
+                  <span className="font-medium">
+                    {selectedFuel === "gasolina95"
+                      ? "Gasolina 95"
+                      : selectedFuel === "gasolina98"
+                      ? "Gasolina 98"
+                      : selectedFuel === "diesel"
+                      ? "Diésel"
+                      : "Diésel Plus"}
+                    :
+                  </span>{" "}
+                  {getFuelPrice(station, selectedFuel)} €/L
                 </p>
                 <p className="text-sm text-gray-600 truncate">
-                  Calle Example {i}, Ciudad
+                  {station.Dirección}, {station.Municipio}
+                </p>
+                <p className="text-sm text-gray-600">
+                  Horario: {station.Horario}
                 </p>
               </div>
             </Card>
