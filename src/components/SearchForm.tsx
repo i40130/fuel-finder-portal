@@ -9,7 +9,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { geocodeCity, getRoute, type FuelStation } from "@/lib/fuelApi";
+import { geocodeCity, getRoute, type FuelStation, calculateDistance } from "@/lib/fuelApi";
 import { useToast } from "@/hooks/use-toast";
 
 interface SearchFormProps {
