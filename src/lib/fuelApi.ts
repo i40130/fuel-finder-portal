@@ -97,9 +97,59 @@ export function filterStations(
     });
 }
 
+export function getNearestStation(
+  stations: FuelStation[],
+  userLat: number,
+  userLng: number
+): FuelStation | null {
+  if (stations.length === 0) return null;
+
+  const stationsWithDistance = stations
+    .map((station) => ({
+      ...station,
+      distance: calculateDistance(
+        userLat,
+        userLng,
+        parseFloat(station.Latitud.replace(",", ".")),
+        parseFloat(station["Longitud (WGS84)"].replace(",", "."))
+      ),
+    }))
+    .sort((a, b) => {
+      if (a.distance && b.distance) {
+        return a.distance - b.distance;
+      }
+      return 0;
+    });
+
+  return stationsWithDistance[0];
+}
+
+export function getCheapestStationInRadius(
+  stations: FuelStation[],
+  userLat: number,
+  userLng: number,
+  fuelType: string,
+  maxDistance: number = 10
+): FuelStation | null {
+  const stationsInRadius = filterStations(stations, userLat, userLng, fuelType, maxDistance);
+  
+  if (stationsInRadius.length === 0) return null;
+
+  return stationsInRadius.reduce((cheapest, current) => {
+    const cheapestPrice = parseFloat(getFuelPrice(cheapest, fuelType).replace(",", "."));
+    const currentPrice = parseFloat(getFuelPrice(current, fuelType).replace(",", "."));
+    
+    if (isNaN(cheapestPrice)) return current;
+    if (isNaN(currentPrice)) return cheapest;
+    
+    return currentPrice < cheapestPrice ? current : cheapest;
+  }, stationsInRadius[0]);
+}
+
 export function getFuelPrice(station: FuelStation, fuelType: string): string {
   const priceKey = getFuelPriceKey(fuelType);
-  return station[priceKey as keyof FuelStation];
+  const price = station[priceKey as keyof FuelStation];
+  return typeof price === "string" ? price : "N/A";
 }
 
 function getFuelPriceKey(fuelType: string): string {
