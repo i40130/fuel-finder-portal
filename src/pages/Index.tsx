@@ -33,6 +33,7 @@ const Index = () => {
   const [routeCoordinates, setRouteCoordinates] = useState<number[][]>();
   const [selectedStation, setSelectedStation] = useState<FuelStation>();
   const [userLocation, setUserLocation] = useState<[number, number]>();
+  const [activeFilter, setActiveFilter] = useState<"nearest" | "cheapest" | null>(null);
   const { toast } = useToast();
 
   const getAvailableBrands = () => {
@@ -116,7 +117,7 @@ const Index = () => {
               point[1],
               point[0]
             );
-            return distance <= 5 && station.Rótulo === selectedBrand;
+            return distance <= 5; // 5km radius
           });
         }
         else if (userLocation) {
@@ -321,6 +322,7 @@ const Index = () => {
     });
 
     setSelectedStation(cheapestStation);
+    setActiveFilter("cheapest");
     toast({
       title: "Gasolinera más barata encontrada",
       description: `${cheapestStation.Rótulo} - ${getFuelPrice(cheapestStation, selectedFuel)}€/L`,
@@ -339,6 +341,7 @@ const Index = () => {
 
     const nearestStation = filteredStations[0]; // Ya están ordenadas por distancia
     setSelectedStation(nearestStation);
+    setActiveFilter("nearest");
     
     const [userLat, userLng] = userLocation;
     const stationLat = parseFloat(nearestStation.Latitud.replace(',', '.'));
@@ -446,7 +449,11 @@ const Index = () => {
               <div className="flex flex-col sm:flex-row gap-4">
                 <Button
                   onClick={findCheapestStation}
-                  className="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white"
+                  className={`flex-1 ${
+                    activeFilter === "cheapest"
+                      ? "bg-yellow-600 hover:bg-yellow-700"
+                      : "bg-yellow-500 hover:bg-yellow-600"
+                  } text-white`}
                   disabled={loading || !filteredStations.length}
                 >
                   <Fuel className="mr-2 h-4 w-4" />
@@ -454,7 +461,11 @@ const Index = () => {
                 </Button>
                 <Button
                   onClick={findNearestStation}
-                  className="flex-1 bg-purple-500 hover:bg-purple-600 text-white"
+                  className={`flex-1 ${
+                    activeFilter === "nearest"
+                      ? "bg-purple-600 hover:bg-purple-700"
+                      : "bg-purple-500 hover:bg-purple-600"
+                  } text-white`}
                   disabled={loading || !filteredStations.length}
                 >
                   <MapPin className="mr-2 h-4 w-4" />
