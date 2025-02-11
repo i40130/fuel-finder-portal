@@ -81,16 +81,29 @@ const Index = () => {
 
     // Luego filtramos por marca si es necesario
     if (selectedBrand !== "todas") {
-      filtered = filtered.filter(station => 
-        station.Rótulo.toLowerCase() === selectedBrand.toLowerCase()
-      );
+      const beforeFilter = filtered.length;
+      const brandToCompare = selectedBrand.toLowerCase().trim();
+      
+      filtered = filtered.filter(station => {
+        const stationBrand = station.Rótulo.toLowerCase().trim();
+        // Log para depuración
+        console.log(`Comparando: "${stationBrand}" con "${brandToCompare}" - Coincide: ${stationBrand === brandToCompare}`);
+        return stationBrand === brandToCompare;
+      });
+      
+      // Log para depuración
+      console.log(`Filtrado por marca ${selectedBrand}: antes ${beforeFilter}, después ${filtered.length}`);
     }
 
     // Finalmente filtramos por combustible disponible
+    const beforeFuelFilter = filtered.length;
     filtered = filtered.filter(station => {
       const price = getFuelPrice(station, selectedFuel);
       return price !== "No disponible";
     });
+    
+    // Log para depuración
+    console.log(`Filtrado por combustible ${selectedFuel}: antes ${beforeFuelFilter}, después ${filtered.length}`);
 
     setFilteredStations(filtered);
   }, [selectedBrand, selectedFuel, stations, routeCoordinates, userLocation, setFilteredStations]);
