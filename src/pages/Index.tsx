@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { Search, MapPin, Fuel, Filter } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -14,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
+import MapboxGeocoding from '@mapbox/mapbox-sdk/services/geocoding';
 import {
   fetchFuelStations,
   filterStations,
@@ -23,18 +23,22 @@ import {
   type FuelStation,
 } from "@/lib/fuelApi";
 
+const MAPBOX_TOKEN = 'pk.eyJ1IjoiamF2aWVycnYiLCJhIjoiY2xxcngyeWlnMDFtdDJrbzZ4Z3E4NWV6dCJ9.uEyZcPUQpfXgc9ml5PqXVg';
+
 const Index = () => {
   const [location, setLocation] = useState({ lat: "", lng: "" });
   const [destination, setDestination] = useState({ lat: "", lng: "" });
+  const [locationSearch, setLocationSearch] = useState("");
+  const [destinationSearch, setDestinationSearch] = useState("");
   const [loading, setLoading] = useState(false);
   const [stations, setStations] = useState<FuelStation[]>([]);
   const [filteredStations, setFilteredStations] = useState<FuelStation[]>([]);
   const [selectedFuel, setSelectedFuel] = useState("gasolina95");
   const [nearestStation, setNearestStation] = useState<FuelStation | null>(null);
   const [cheapestStation, setCheapestStation] = useState<FuelStation | null>(null);
-  const [mapboxToken, setMapboxToken] = useState("");
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
+  const geocodingClient = MapboxGeocoding({ accessToken: MAPBOX_TOKEN });
   const { toast } = useToast();
 
   useEffect(() => {
@@ -74,11 +78,11 @@ const Index = () => {
   }, [location, selectedFuel, stations]);
 
   useEffect(() => {
-    if (!mapContainer.current || !mapboxToken) return;
+    if (!mapContainer.current) return;
 
     if (map.current) return;
 
-    mapboxgl.accessToken = mapboxToken;
+    mapboxgl.accessToken = MAPBOX_TOKEN;
     
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
@@ -93,7 +97,7 @@ const Index = () => {
     return () => {
       map.current?.remove();
     };
-  }, [mapboxToken]);
+  }, []);
 
   useEffect(() => {
     if (!map.current || !location.lat || !location.lng) return;
@@ -225,6 +229,44 @@ const Index = () => {
     }
   };
 
+  const handleGeocodeLocation = async (search: string, isDestination: boolean) => {
+    try {
+      const response = await geocodingClient
+        .forwardGeocode({
+          query: search,
+          limit: 1,
+          countries: ['es'] // Limitar búsqueda a España
+        })
+        .send();
+
+      if (response.body.features.length > 0) {
+        const [lng, lat] = response.body.features[0].center;
+        if (isDestination) {
+          setDestination({ lat: lat.toString(), lng: lng.toString() });
+        } else {
+          setLocation({ lat: lat.toString(), lng: lng.toString() });
+        }
+        toast({
+          title: "Ubicación encontrada",
+          description: `Coordenadas actualizadas para ${search}`,
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "No se encontró la ubicación especificada",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error geocoding:', error);
+      toast({
+        title: "Error",
+        description: "No se pudo convertir la dirección en coordenadas",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleGeolocation = () => {
     setLoading(true);
     if ("geolocation" in navigator) {
@@ -342,89 +384,41 @@ const Index = () => {
 
         <Card className="p-6 shadow-lg bg-white/80 backdrop-blur-sm mb-6">
           <div className="space-y-6">
-            <div className="space-y-4">
-              <label className="block text-sm font-medium text-gray-700">
-                Token de Mapbox (temporal)
-              </label>
-              <Input
-                type="text"
-                value={mapboxToken}
-                onChange={(e) => setMapboxToken(e.target.value)}
-                placeholder="Ingresa tu token público de Mapbox"
-                className="w-full"
-              />
-            </div>
-
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-700">
-                  Origen (Latitud)
+                  Origen (Ciudad o dirección)
                 </label>
                 <div className="relative">
                   <Input
                     type="text"
-                    value={location.lat}
-                    onChange={(e) =>
-                      setLocation((prev) => ({ ...prev, lat: e.target.value }))
-                    }
-                    placeholder="Ingresa la latitud"
+                    value={locationSearch}
+                    onChange={(e) => setLocationSearch(e.target.value)}
+                    placeholder="Ej: Madrid, Plaza Mayor"
                     className="pl-10"
                   />
-                  <MapPin className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
+                  <Search 
+                    className="absolute left-3 top-2.5 h-5 w-5 text-gray-400 cursor-pointer"
+                    onClick={() => handleGeocodeLocation(locationSearch, false)}
+                  />
                 </div>
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-700">
-                  Origen (Longitud)
+                  Destino (Ciudad o dirección)
                 </label>
                 <div className="relative">
                   <Input
                     type="text"
-                    value={location.lng}
-                    onChange={(e) =>
-                      setLocation((prev) => ({ ...prev, lng: e.target.value }))
-                    }
-                    placeholder="Ingresa la longitud"
+                    value={destinationSearch}
+                    onChange={(e) => setDestinationSearch(e.target.value)}
+                    placeholder="Ej: Barcelona, Sagrada Familia"
                     className="pl-10"
                   />
-                  <MapPin className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">
-                  Destino (Latitud)
-                </label>
-                <div className="relative">
-                  <Input
-                    type="text"
-                    value={destination.lat}
-                    onChange={(e) =>
-                      setDestination((prev) => ({ ...prev, lat: e.target.value }))
-                    }
-                    placeholder="Ingresa la latitud"
-                    className="pl-10"
+                  <Search 
+                    className="absolute left-3 top-2.5 h-5 w-5 text-gray-400 cursor-pointer"
+                    onClick={() => handleGeocodeLocation(destinationSearch, true)}
                   />
-                  <MapPin className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">
-                  Destino (Longitud)
-                </label>
-                <div className="relative">
-                  <Input
-                    type="text"
-                    value={destination.lng}
-                    onChange={(e) =>
-                      setDestination((prev) => ({ ...prev, lng: e.target.value }))
-                    }
-                    placeholder="Ingresa la longitud"
-                    className="pl-10"
-                  />
-                  <MapPin className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
                 </div>
               </div>
             </div>
