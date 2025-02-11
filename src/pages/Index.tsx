@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Search, MapPin, Fuel, Filter } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -32,6 +33,7 @@ const Index = () => {
   const [filteredStations, setFilteredStations] = useState<FuelStation[]>([]);
   const [selectedFuel, setSelectedFuel] = useState("gasolina95");
   const [routeCoordinates, setRouteCoordinates] = useState<number[][]>();
+  const [selectedStation, setSelectedStation] = useState<FuelStation>();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -101,11 +103,27 @@ const Index = () => {
             return distance <= 5; // 5km radius
           });
         });
+
+        // Sort stations by distance along the route
+        const sortedStations = routeStations.sort((a, b) => {
+          const aLat = parseFloat(a.Latitud.replace(',', '.'));
+          const aLng = parseFloat(a['Longitud (WGS84)'].replace(',', '.'));
+          const bLat = parseFloat(b.Latitud.replace(',', '.'));
+          const bLng = parseFloat(b['Longitud (WGS84)'].replace(',', '.'));
+
+          // Find closest point on route for each station
+          const aMinDist = Math.min(...route.map(point => 
+            calculateDistance(aLat, aLng, point[1], point[0])));
+          const bMinDist = Math.min(...route.map(point => 
+            calculateDistance(bLat, bLng, point[1], point[0])));
+
+          return aMinDist - bMinDist;
+        });
         
-        setFilteredStations(routeStations);
+        setFilteredStations(sortedStations);
         toast({
           title: "Ruta calculada",
-          description: `Se encontraron ${routeStations.length} gasolineras cerca de la ruta`,
+          description: `Se encontraron ${sortedStations.length} gasolineras cerca de la ruta`,
         });
       }
     } catch (error) {
@@ -117,6 +135,10 @@ const Index = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleStationClick = (station: FuelStation) => {
+    setSelectedStation(station);
   };
 
   return (
@@ -185,13 +207,22 @@ const Index = () => {
           </div>
         </Card>
 
-        <Map stations={filteredStations} routeCoordinates={routeCoordinates} />
+        <Map 
+          stations={filteredStations} 
+          routeCoordinates={routeCoordinates} 
+          selectedStation={selectedStation}
+        />
 
         <div className="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredStations.map((station) => (
             <Card
               key={station.IDEESS}
-              className="p-6 hover:shadow-lg transition-shadow duration-200"
+              className={`p-6 hover:shadow-lg transition-shadow duration-200 cursor-pointer ${
+                selectedStation?.IDEESS === station.IDEESS 
+                  ? 'ring-2 ring-green-500 shadow-lg' 
+                  : ''
+              }`}
+              onClick={() => handleStationClick(station)}
             >
               <div className="flex justify-between items-start mb-4">
                 <div>

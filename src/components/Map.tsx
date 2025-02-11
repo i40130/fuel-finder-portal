@@ -7,9 +7,10 @@ import { FuelStation } from '@/lib/fuelApi';
 interface MapProps {
   stations: FuelStation[];
   routeCoordinates?: number[][];
+  selectedStation?: FuelStation;
 }
 
-const Map = ({ stations, routeCoordinates }: MapProps) => {
+const Map = ({ stations, routeCoordinates, selectedStation }: MapProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const markersRef = useRef<mapboxgl.Marker[]>([]);
@@ -34,7 +35,7 @@ const Map = ({ stations, routeCoordinates }: MapProps) => {
     };
   }, []);
 
-  // Update markers when stations change
+  // Update markers when stations or selected station changes
   useEffect(() => {
     if (!map.current) return;
 
@@ -49,9 +50,18 @@ const Map = ({ stations, routeCoordinates }: MapProps) => {
 
       const el = document.createElement('div');
       el.className = 'marker';
-      el.style.backgroundColor = '#FF0000';
-      el.style.width = '15px';
-      el.style.height = '15px';
+      
+      // Highlight selected station
+      if (selectedStation?.IDEESS === station.IDEESS) {
+        el.style.backgroundColor = '#00FF00';
+        el.style.width = '20px';
+        el.style.height = '20px';
+        el.style.border = '3px solid #000';
+      } else {
+        el.style.backgroundColor = '#FF0000';
+        el.style.width = '15px';
+        el.style.height = '15px';
+      }
       el.style.borderRadius = '50%';
 
       const marker = new mapboxgl.Marker(el)
@@ -65,7 +75,7 @@ const Map = ({ stations, routeCoordinates }: MapProps) => {
 
       markersRef.current.push(marker);
     });
-  }, [stations]);
+  }, [stations, selectedStation]);
 
   // Update route when coordinates change
   useEffect(() => {
