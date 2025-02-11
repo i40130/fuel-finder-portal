@@ -27,23 +27,13 @@ export const useStationFilters = (
       return;
     }
 
-    // Usar la misma lista de estaciones que ya está filtrada
-    const cheapestStation = filteredStations.reduce((cheapest, current) => {
-      const cheapestPrice = getFuelPrice(cheapest, selectedFuel);
-      const currentPrice = getFuelPrice(current, selectedFuel);
-      
-      // Si alguno de los precios no está disponible, mantener el que sí lo está
-      if (cheapestPrice === "No disponible") return current;
-      if (currentPrice === "No disponible") return cheapest;
-      
-      const cheapestValue = parseFloat(cheapestPrice.replace(',', '.'));
-      const currentValue = parseFloat(currentPrice.replace(',', '.'));
-      
-      return currentValue < cheapestValue ? current : cheapest;
-    }, filteredStations[0]);
+    // Filtrar primero las estaciones que tienen el combustible disponible
+    const stationsWithFuel = filteredStations.filter(station => {
+      const price = getFuelPrice(station, selectedFuel);
+      return price !== "No disponible";
+    });
 
-    // Verificar si el precio está disponible para la estación más barata
-    if (getFuelPrice(cheapestStation, selectedFuel) === "No disponible") {
+    if (stationsWithFuel.length === 0) {
       toast({
         title: "Error",
         description: "No se encontraron estaciones con el combustible seleccionado",
@@ -51,6 +41,16 @@ export const useStationFilters = (
       });
       return;
     }
+
+    const cheapestStation = stationsWithFuel.reduce((cheapest, current) => {
+      const cheapestPrice = getFuelPrice(cheapest, selectedFuel);
+      const currentPrice = getFuelPrice(current, selectedFuel);
+      
+      const cheapestValue = parseFloat(cheapestPrice.replace(',', '.'));
+      const currentValue = parseFloat(currentPrice.replace(',', '.'));
+      
+      return currentValue < cheapestValue ? current : cheapest;
+    }, stationsWithFuel[0]);
 
     setSelectedStation(cheapestStation);
     setActiveFilter("cheapest");
@@ -94,24 +94,22 @@ export const useStationFilters = (
 
     const [userLat, userLng] = userLocation;
     
-    const nearestStation = filteredStations.reduce((nearest, current) => {
-      const nearestLat = parseFloat(nearest.Latitud.replace(',', '.'));
-      const nearestLng = parseFloat(nearest['Longitud (WGS84)'].replace(',', '.'));
-      const currentLat = parseFloat(current.Latitud.replace(',', '.'));
-      const currentLng = parseFloat(current['Longitud (WGS84)'].replace(',', '.'));
-      
-      const distNearest = calculateDistance(userLat, userLng, nearestLat, nearestLng);
-      const distCurrent = calculateDistance(userLat, userLng, currentLat, currentLng);
-      
-      return distCurrent < distNearest ? current : nearest;
-    }, filteredStations[0]);
+    // Calcular distancias y ordenar
+    const stationsWithDistance = filteredStations.map(station => {
+      const stationLat = parseFloat(station.Latitud.replace(',', '.'));
+      const stationLng = parseFloat(station['Longitud (WGS84)'].replace(',', '.'));
+      const distance = calculateDistance(userLat, userLng, stationLat, stationLng);
+      return { station, distance };
+    }).sort((a, b) => a.distance - b.distance);
+
+    const nearestStation = stationsWithDistance[0].station;
+    const distance = stationsWithDistance[0].distance;
 
     setSelectedStation(nearestStation);
     setActiveFilter("nearest");
-    
+
     const stationLat = parseFloat(nearestStation.Latitud.replace(',', '.'));
     const stationLng = parseFloat(nearestStation['Longitud (WGS84)'].replace(',', '.'));
-    const distance = calculateDistance(userLat, userLng, stationLat, stationLng);
 
     try {
       const route = await getRoute(

@@ -4,6 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   getRoute,
   calculateDistance,
+  getFuelPrice,
   type FuelStation,
 } from "@/lib/fuelApi";
 
@@ -28,19 +29,24 @@ export const useLocationAndRoute = (
           const userLng = position.coords.longitude;
           setUserLocation([userLat, userLng]);
           
-          // Filtrar estaciones por distancia
-          const nearbyStations = stations.filter(station => {
+          // Calcular distancias y ordenar
+          const stationsWithDistance = stations.map(station => {
             const stationLat = parseFloat(station.Latitud.replace(',', '.'));
             const stationLng = parseFloat(station['Longitud (WGS84)'].replace(',', '.'));
             const distance = calculateDistance(userLat, userLng, stationLat, stationLng);
-            return distance <= 10;
-          });
+            return { station, distance };
+          }).filter(({ distance }) => distance <= 10);
+
+          // Ordenar por distancia
+          const nearbyStations = stationsWithDistance
+            .sort((a, b) => a.distance - b.distance)
+            .map(({ station }) => station);
 
           // Filtrar por marca si es necesario
           const filteredByBrand = selectedBrand === "todas" 
             ? nearbyStations 
             : nearbyStations.filter(station => 
-                station.Rótulo.toLowerCase().trim().includes(selectedBrand.toLowerCase().trim())
+                station.Rótulo.toLowerCase().trim() === selectedBrand.toLowerCase().trim()
               );
 
           setFilteredStations(filteredByBrand);
@@ -121,4 +127,3 @@ export const useLocationAndRoute = (
     handleStationClick,
   };
 };
-
