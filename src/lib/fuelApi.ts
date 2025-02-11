@@ -1,4 +1,3 @@
-
 export interface FuelStation {
   "C.P.": string;
   Dirección: string;
@@ -32,6 +31,7 @@ export interface FuelStation {
   IDMunicipio: string;
   IDProvincia: string;
   IDCCAA: string;
+  distance?: number; // Added optional distance property
 }
 
 export async function fetchFuelStations(): Promise<FuelStation[]> {
