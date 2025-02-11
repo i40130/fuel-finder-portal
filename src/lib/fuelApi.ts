@@ -1,4 +1,3 @@
-
 export interface FuelStation {
   "C.P.": string;
   Dirección: string;
@@ -160,4 +159,37 @@ function getFuelPriceKey(fuelType: string): string {
     dieselplus: "Precio Gasoleo Premium",
   };
   return fuelTypes[fuelType] || "Precio Gasolina 95 E5";
+}
+
+export async function geocodeCity(cityName: string): Promise<[number, number] | null> {
+  try {
+    const response = await fetch(
+      `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(cityName)}.json?country=es&access_token=pk.eyJ1IjoianVhbmJhLWVzY3JpZyIsImEiOiJjbTcwYnJvOTcwMGQ1MmlzN2R4bzh4eXRhIn0.77pvZCAPAEWReY12K0mBPg`
+    );
+    const data = await response.json();
+    if (data.features && data.features.length > 0) {
+      const [lng, lat] = data.features[0].center;
+      return [lng, lat];
+    }
+    return null;
+  } catch (error) {
+    console.error('Error geocoding city:', error);
+    return null;
+  }
+}
+
+export async function getRoute(originCoords: [number, number], destCoords: [number, number]): Promise<number[][] | null> {
+  try {
+    const response = await fetch(
+      `https://api.mapbox.com/directions/v5/mapbox/driving/${originCoords[0]},${originCoords[1]};${destCoords[0]},${destCoords[1]}?geometries=geojson&access_token=pk.eyJ1IjoianVhbmJhLWVzY3JpZyIsImEiOiJjbTcwYnJvOTcwMGQ1MmlzN2R4bzh4eXRhIn0.77pvZCAPAEWReY12K0mBPg`
+    );
+    const data = await response.json();
+    if (data.routes && data.routes.length > 0) {
+      return data.routes[0].geometry.coordinates;
+    }
+    return null;
+  } catch (error) {
+    console.error('Error getting route:', error);
+    return null;
+  }
 }
