@@ -38,7 +38,7 @@ export async function fetchFuelStations(): Promise<FuelStation[]> {
   try {
     // Usamos un proxy CORS para evitar problemas de acceso a la API
     const response = await fetch(
-      "https://corsproxy.io/?https://sedeaplicaciones.minetur.gob.es/ServiciosRESTCarburantes/PreciosCarburantes/EstacionesTerrestresNOBD/"
+      "https://corsproxy.io/?https://sedeaplicaciones.minetur.gob.es/ServiciosRESTCarburantes/PreciosCarburantes/EstacionesTerrestres"
     );
     
     if (!response.ok) {
