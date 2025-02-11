@@ -23,7 +23,7 @@ export function FilterButtons({
   if (!userLocation) return null;
 
   return (
-    <div className="flex flex-col sm:flex-row gap-4">
+    <div className="flex flex-col sm:flex-row gap-4 mt-6">
       <Button
         onClick={findCheapestStation}
         className={`flex-1 ${
@@ -51,3 +51,4 @@ export function FilterButtons({
     </div>
   );
 }
+
