@@ -27,7 +27,22 @@ export const useStationFilters = (
       return;
     }
 
-    const cheapestStation = filteredStations.reduce((cheapest, current) => {
+    // Filtrar estaciones que tienen el precio del combustible seleccionado
+    const stationsWithFuel = filteredStations.filter(station => {
+      const price = getFuelPrice(station, selectedFuel);
+      return price !== "No disponible";
+    });
+
+    if (stationsWithFuel.length === 0) {
+      toast({
+        title: "Error",
+        description: "No se encontraron estaciones con el combustible seleccionado",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const cheapestStation = stationsWithFuel.reduce((cheapest, current) => {
       const cheapestPrice = parseFloat(getFuelPrice(cheapest, selectedFuel).replace(',', '.'));
       const currentPrice = parseFloat(getFuelPrice(current, selectedFuel).replace(',', '.'));
       return currentPrice < cheapestPrice ? current : cheapest;
@@ -85,7 +100,7 @@ export const useStationFilters = (
       const distCurrent = calculateDistance(userLat, userLng, currentLat, currentLng);
       
       return distCurrent < distNearest ? current : nearest;
-    }, filteredStations[0]);
+    });
 
     setSelectedStation(nearestStation);
     setActiveFilter("nearest");
