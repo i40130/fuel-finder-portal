@@ -43,6 +43,12 @@ const Index = () => {
 
   // Efecto para actualizar las estaciones cuando cambia la marca seleccionada
   useEffect(() => {
+    // Si no hay ubicación del usuario ni ruta, no mostramos estaciones
+    if (!userLocation && !routeCoordinates) {
+      setFilteredStations([]);
+      return;
+    }
+
     if (!stations.length) return;
     
     let filtered = stations;
