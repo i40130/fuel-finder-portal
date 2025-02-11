@@ -32,6 +32,7 @@ const Index = () => {
   const [selectedFuel, setSelectedFuel] = useState("gasolina95");
   const [routeCoordinates, setRouteCoordinates] = useState<number[][]>();
   const [selectedStation, setSelectedStation] = useState<FuelStation>();
+  const [userLocation, setUserLocation] = useState<[number, number]>();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -146,6 +147,7 @@ const Index = () => {
         async (position) => {
           const userLat = position.coords.latitude;
           const userLng = position.coords.longitude;
+          setUserLocation([userLat, userLng]);
           
           const nearbyStations = stations.filter(station => {
             const stationLat = parseFloat(station.Latitud.replace(',', '.'));
@@ -190,6 +192,53 @@ const Index = () => {
       });
       setLoading(false);
     }
+  };
+
+  const findCheapestStation = () => {
+    if (!filteredStations.length || !userLocation) {
+      toast({
+        title: "Error",
+        description: "Primero debes usar tu ubicación para obtener gasolineras cercanas",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const cheapestStation = filteredStations.reduce((cheapest, current) => {
+      const cheapestPrice = parseFloat(getFuelPrice(cheapest, selectedFuel).replace(',', '.'));
+      const currentPrice = parseFloat(getFuelPrice(current, selectedFuel).replace(',', '.'));
+      return currentPrice < cheapestPrice ? current : cheapest;
+    });
+
+    setSelectedStation(cheapestStation);
+    toast({
+      title: "Gasolinera más barata encontrada",
+      description: `${cheapestStation.Rótulo} - ${getFuelPrice(cheapestStation, selectedFuel)}€/L`,
+    });
+  };
+
+  const findNearestStation = () => {
+    if (!filteredStations.length || !userLocation) {
+      toast({
+        title: "Error",
+        description: "Primero debes usar tu ubicación para obtener gasolineras cercanas",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const nearestStation = filteredStations[0]; // Ya están ordenadas por distancia
+    setSelectedStation(nearestStation);
+    
+    const [userLat, userLng] = userLocation;
+    const stationLat = parseFloat(nearestStation.Latitud.replace(',', '.'));
+    const stationLng = parseFloat(nearestStation['Longitud (WGS84)'].replace(',', '.'));
+    const distance = calculateDistance(userLat, userLng, stationLat, stationLng);
+
+    toast({
+      title: "Gasolinera más cercana encontrada",
+      description: `${nearestStation.Rótulo} - a ${distance.toFixed(1)}km`,
+    });
   };
 
   return (
@@ -263,6 +312,26 @@ const Index = () => {
                 Usar mi ubicación
               </Button>
             </div>
+            {userLocation && (
+              <div className="flex flex-col sm:flex-row gap-4">
+                <Button
+                  onClick={findCheapestStation}
+                  className="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white"
+                  disabled={loading || !filteredStations.length}
+                >
+                  <Fuel className="mr-2 h-4 w-4" />
+                  Encontrar la más barata
+                </Button>
+                <Button
+                  onClick={findNearestStation}
+                  className="flex-1 bg-purple-500 hover:bg-purple-600 text-white"
+                  disabled={loading || !filteredStations.length}
+                >
+                  <MapPin className="mr-2 h-4 w-4" />
+                  Encontrar la más cercana
+                </Button>
+              </div>
+            )}
           </div>
         </Card>
 
@@ -319,3 +388,4 @@ const Index = () => {
 };
 
 export default Index;
+
