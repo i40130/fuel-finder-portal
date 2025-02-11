@@ -133,8 +133,13 @@ const Index = () => {
 
     try {
       const response = await fetch(
-        `https://api.mapbox.com/directions/v5/mapbox/driving/${location.lng},${location.lat};${destination.lng},${destination.lat}?geometries=geojson&access_token=${mapboxToken}`
+        `https://api.mapbox.com/directions/v5/mapbox/driving/${location.lng},${location.lat};${destination.lng},${destination.lat}?geometries=geojson&access_token=${MAPBOX_TOKEN}`
       );
+      
+      if (!response.ok) {
+        throw new Error('Error calculating route');
+      }
+
       const data = await response.json();
 
       if (data.routes && data.routes[0]) {
