@@ -54,13 +54,7 @@ const Index = () => {
     // Comenzamos con todas las estaciones
     let filtered = [...stations];
 
-    // Primero filtramos por combustible disponible
-    filtered = filtered.filter(station => {
-      const price = getFuelPrice(station, selectedFuel);
-      return price !== "No disponible";
-    });
-
-    // Luego filtramos por ubicación
+    // Primero filtramos por ubicación
     if (routeCoordinates) {
       filtered = filtered.filter(station => {
         const stationLat = parseFloat(station.Latitud.replace(',', '.'));
@@ -86,12 +80,24 @@ const Index = () => {
       });
     }
 
+    // Filtramos por combustible disponible
+    filtered = filtered.filter(station => {
+      const price = getFuelPrice(station, selectedFuel);
+      return price !== "No disponible";
+    });
+
     // Finalmente filtramos por marca si es necesario
     if (selectedBrand !== "todas") {
       filtered = filtered.filter(station => {
-        return station.Rótulo.toLowerCase().includes(selectedBrand.toLowerCase());
+        // Asegurarnos de que la comparación es case-insensitive y maneja espacios
+        const stationBrand = station.Rótulo.toLowerCase().trim();
+        const selectedBrandLower = selectedBrand.toLowerCase().trim();
+        return stationBrand.includes(selectedBrandLower);
       });
     }
+
+    console.log('Total estaciones filtradas:', filtered.length);
+    console.log('Estaciones por marca:', filtered.map(s => s.Rótulo));
 
     setFilteredStations(filtered);
   }, [selectedBrand, selectedFuel, stations, routeCoordinates, userLocation, setFilteredStations]);
