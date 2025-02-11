@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import Map from "@/components/Map";
@@ -41,7 +40,7 @@ const Index = () => {
     findNearestStation,
   } = useStationFilters(userLocation, filteredStations, setSelectedStation, setRouteCoordinates);
 
-  // Efecto para actualizar las estaciones cuando cambian los filtros
+  // Efecto para actualizar las estaciones cuando cambian los filtros principales
   useEffect(() => {
     if (!stations.length) return;
 
@@ -55,7 +54,7 @@ const Index = () => {
     let filtered = [...stations];
 
     // Primero filtramos por ubicación
-    if (routeCoordinates) {
+    if (routeCoordinates && routeCoordinates.length > 1) { // Solo si hay una ruta real, no solo la ubicación del usuario
       filtered = filtered.filter(station => {
         const stationLat = parseFloat(station.Latitud.replace(',', '.'));
         const stationLng = parseFloat(station['Longitud (WGS84)'].replace(',', '.'));
@@ -88,19 +87,13 @@ const Index = () => {
 
     // Finalmente filtramos por marca si es necesario
     if (selectedBrand !== "todas") {
-      filtered = filtered.filter(station => {
-        // Asegurarnos de que la comparación es case-insensitive y maneja espacios
-        const stationBrand = station.Rótulo.toLowerCase().trim();
-        const selectedBrandLower = selectedBrand.toLowerCase().trim();
-        return stationBrand.includes(selectedBrandLower);
-      });
+      filtered = filtered.filter(station => 
+        station.Rótulo.toLowerCase().trim() === selectedBrand.toLowerCase().trim()
+      );
     }
 
-    console.log('Total estaciones filtradas:', filtered.length);
-    console.log('Estaciones por marca:', filtered.map(s => s.Rótulo));
-
     setFilteredStations(filtered);
-  }, [selectedBrand, selectedFuel, stations, routeCoordinates, userLocation, setFilteredStations]);
+  }, [selectedBrand, selectedFuel, stations, userLocation, setFilteredStations]);
 
   const uniqueBrands = getAvailableBrands(routeCoordinates, userLocation);
 
