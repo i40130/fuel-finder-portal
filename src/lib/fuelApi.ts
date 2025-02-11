@@ -1,3 +1,4 @@
+
 export interface FuelStation {
   "C.P.": string;
   Dirección: string;
@@ -31,7 +32,7 @@ export interface FuelStation {
   IDMunicipio: string;
   IDProvincia: string;
   IDCCAA: string;
-  distance?: number; // Added optional distance property
+  distance?: number;
 }
 
 export async function fetchFuelStations(): Promise<FuelStation[]> {
@@ -88,12 +89,17 @@ export function filterStations(
       ),
     }))
     .filter((station) => station.distance <= maxDistance)
-    .sort((a, b) => a.distance - b.distance);
+    .sort((a, b) => {
+      if (a.distance && b.distance) {
+        return a.distance - b.distance;
+      }
+      return 0;
+    });
 }
 
 export function getFuelPrice(station: FuelStation, fuelType: string): string {
   const priceKey = getFuelPriceKey(fuelType);
-  return station[priceKey as keyof FuelStation] || "N/A";
+  return station[priceKey as keyof FuelStation];
 }
 
 function getFuelPriceKey(fuelType: string): string {
