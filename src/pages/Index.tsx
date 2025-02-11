@@ -51,11 +51,18 @@ const Index = () => {
       return;
     }
     
-    let filtered = stations;
+    // Comenzamos con todas las estaciones
+    let filtered = [...stations];
 
-    // Primero filtramos por ubicación
+    // Primero filtramos por combustible disponible
+    filtered = filtered.filter(station => {
+      const price = getFuelPrice(station, selectedFuel);
+      return price !== "No disponible";
+    });
+
+    // Luego filtramos por ubicación
     if (routeCoordinates) {
-      filtered = stations.filter(station => {
+      filtered = filtered.filter(station => {
         const stationLat = parseFloat(station.Latitud.replace(',', '.'));
         const stationLng = parseFloat(station['Longitud (WGS84)'].replace(',', '.'));
         
@@ -71,7 +78,7 @@ const Index = () => {
       });
     } else if (userLocation) {
       const [userLat, userLng] = userLocation;
-      filtered = stations.filter(station => {
+      filtered = filtered.filter(station => {
         const stationLat = parseFloat(station.Latitud.replace(',', '.'));
         const stationLng = parseFloat(station['Longitud (WGS84)'].replace(',', '.'));
         const distance = calculateDistance(userLat, userLng, stationLat, stationLng);
@@ -79,31 +86,12 @@ const Index = () => {
       });
     }
 
-    // Luego filtramos por marca si es necesario
+    // Finalmente filtramos por marca si es necesario
     if (selectedBrand !== "todas") {
-      const beforeFilter = filtered.length;
-      const brandToCompare = selectedBrand.toLowerCase().trim();
-      
       filtered = filtered.filter(station => {
-        const stationBrand = station.Rótulo.toLowerCase().trim();
-        // Log para depuración
-        console.log(`Comparando: "${stationBrand}" con "${brandToCompare}" - Coincide: ${stationBrand === brandToCompare}`);
-        return stationBrand === brandToCompare;
+        return station.Rótulo.toLowerCase().includes(selectedBrand.toLowerCase());
       });
-      
-      // Log para depuración
-      console.log(`Filtrado por marca ${selectedBrand}: antes ${beforeFilter}, después ${filtered.length}`);
     }
-
-    // Finalmente filtramos por combustible disponible
-    const beforeFuelFilter = filtered.length;
-    filtered = filtered.filter(station => {
-      const price = getFuelPrice(station, selectedFuel);
-      return price !== "No disponible";
-    });
-    
-    // Log para depuración
-    console.log(`Filtrado por combustible ${selectedFuel}: antes ${beforeFuelFilter}, después ${filtered.length}`);
 
     setFilteredStations(filtered);
   }, [selectedBrand, selectedFuel, stations, routeCoordinates, userLocation, setFilteredStations]);
