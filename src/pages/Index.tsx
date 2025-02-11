@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from "react";
+
+import { useState, useEffect } from "react";
 import { Search, MapPin, Fuel, Filter } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,9 +12,6 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import mapboxgl from 'mapbox-gl';
-import 'mapbox-gl/dist/mapbox-gl.css';
-import MapboxGeocoding from '@mapbox/mapbox-sdk/services/geocoding';
 import {
   fetchFuelStations,
   filterStations,
@@ -23,22 +21,14 @@ import {
   type FuelStation,
 } from "@/lib/fuelApi";
 
-const MAPBOX_TOKEN = 'pk.eyJ1IjoiamF2aWVycnYiLCJhIjoiY2xxcngyeWlnMDFtdDJrbzZ4Z3E4NWV6dCJ9.uEyZcPUQpfXgc9ml5PqXVg';
-
 const Index = () => {
   const [location, setLocation] = useState({ lat: "", lng: "" });
-  const [destination, setDestination] = useState({ lat: "", lng: "" });
-  const [locationSearch, setLocationSearch] = useState("");
-  const [destinationSearch, setDestinationSearch] = useState("");
   const [loading, setLoading] = useState(false);
   const [stations, setStations] = useState<FuelStation[]>([]);
   const [filteredStations, setFilteredStations] = useState<FuelStation[]>([]);
   const [selectedFuel, setSelectedFuel] = useState("gasolina95");
   const [nearestStation, setNearestStation] = useState<FuelStation | null>(null);
   const [cheapestStation, setCheapestStation] = useState<FuelStation | null>(null);
-  const mapContainer = useRef<HTMLDivElement>(null);
-  const map = useRef<mapboxgl.Map | null>(null);
-  const geocodingClient = MapboxGeocoding({ accessToken: MAPBOX_TOKEN });
   const { toast } = useToast();
 
   useEffect(() => {
@@ -76,201 +66,6 @@ const Index = () => {
       setFilteredStations(filtered);
     }
   }, [location, selectedFuel, stations]);
-
-  useEffect(() => {
-    if (!mapContainer.current) return;
-
-    if (map.current) return;
-
-    mapboxgl.accessToken = MAPBOX_TOKEN;
-    
-    map.current = new mapboxgl.Map({
-      container: mapContainer.current,
-      style: 'mapbox://styles/mapbox/streets-v11',
-      center: [-3.70275, 40.4167], // Madrid por defecto
-      zoom: 5
-    });
-
-    // Añadir controles de navegación
-    map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
-
-    return () => {
-      map.current?.remove();
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!map.current || !location.lat || !location.lng) return;
-
-    // Añadir marcador de origen
-    new mapboxgl.Marker({ color: '#FF0000' })
-      .setLngLat([parseFloat(location.lng), parseFloat(location.lat)])
-      .addTo(map.current);
-
-    // Centrar mapa en la ubicación
-    map.current.flyTo({
-      center: [parseFloat(location.lng), parseFloat(location.lat)],
-      zoom: 12
-    });
-  }, [location]);
-
-  useEffect(() => {
-    if (!map.current || !destination.lat || !destination.lng) return;
-
-    // Añadir marcador de destino
-    new mapboxgl.Marker({ color: '#00FF00' })
-      .setLngLat([parseFloat(destination.lng), parseFloat(destination.lat)])
-      .addTo(map.current);
-
-    // Si tenemos origen y destino, calcular la ruta
-    if (location.lat && location.lng) {
-      calculateRoute();
-    }
-  }, [destination]);
-
-  const calculateRoute = async () => {
-    if (!map.current || !location.lat || !location.lng || !destination.lat || !destination.lng) return;
-
-    try {
-      const response = await fetch(
-        `https://api.mapbox.com/directions/v5/mapbox/driving/${location.lng},${location.lat};${destination.lng},${destination.lat}?geometries=geojson&access_token=${MAPBOX_TOKEN}`
-      );
-      
-      if (!response.ok) {
-        throw new Error('Error calculating route');
-      }
-
-      const data = await response.json();
-
-      if (data.routes && data.routes[0]) {
-        const route = data.routes[0].geometry;
-
-        if (map.current.getSource('route')) {
-          (map.current.getSource('route') as mapboxgl.GeoJSONSource).setData({
-            type: 'Feature',
-            properties: {},
-            geometry: route
-          });
-        } else {
-          map.current.addSource('route', {
-            type: 'geojson',
-            data: {
-              type: 'Feature',
-              properties: {},
-              geometry: route
-            }
-          });
-
-          map.current.addLayer({
-            id: 'route',
-            type: 'line',
-            source: 'route',
-            layout: {
-              'line-join': 'round',
-              'line-cap': 'round'
-            },
-            paint: {
-              'line-color': '#888',
-              'line-width': 8
-            }
-          });
-        }
-
-        // Ajustar el mapa para mostrar toda la ruta
-        const bounds = new mapboxgl.LngLatBounds();
-        route.coordinates.forEach((coord: [number, number]) => {
-          bounds.extend(coord);
-        });
-        
-        map.current.fitBounds(bounds, {
-          padding: 50
-        });
-
-        // Mostrar gasolineras cercanas a la ruta
-        const filteredStationsNearRoute = stations.filter(station => {
-          const stationPoint = [
-            parseFloat(station["Longitud (WGS84)"].replace(",", ".")),
-            parseFloat(station.Latitud.replace(",", "."))
-          ];
-          
-          return route.coordinates.some(coord => {
-            const distance = calculateDistance(
-              coord[1],
-              coord[0],
-              stationPoint[1],
-              stationPoint[0]
-            );
-            return distance <= 5; // 5km de la ruta
-          });
-        });
-
-        // Añadir marcadores de gasolineras
-        filteredStationsNearRoute.forEach(station => {
-          const popup = new mapboxgl.Popup({ offset: 25 })
-            .setHTML(
-              `<h3>${station.Rótulo}</h3>
-               <p>${selectedFuel}: ${getFuelPrice(station, selectedFuel)}€/L</p>
-               <p>${station.Dirección}</p>`
-            );
-
-          new mapboxgl.Marker({ color: '#0000FF' })
-            .setLngLat([
-              parseFloat(station["Longitud (WGS84)"].replace(",", ".")),
-              parseFloat(station.Latitud.replace(",", "."))
-            ])
-            .setPopup(popup)
-            .addTo(map.current);
-        });
-
-        setFilteredStations(filteredStationsNearRoute);
-      }
-    } catch (error) {
-      console.error('Error calculating route:', error);
-      toast({
-        title: "Error",
-        description: "No se pudo calcular la ruta",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleGeocodeLocation = async (search: string, isDestination: boolean) => {
-    try {
-      const response = await geocodingClient
-        .forwardGeocode({
-          query: search,
-          limit: 1,
-          countries: ['es'] // Limitar búsqueda a España
-        })
-        .send();
-
-      if (response.body.features.length > 0) {
-        const [lng, lat] = response.body.features[0].center;
-        if (isDestination) {
-          setDestination({ lat: lat.toString(), lng: lng.toString() });
-        } else {
-          setLocation({ lat: lat.toString(), lng: lng.toString() });
-        }
-        toast({
-          title: "Ubicación encontrada",
-          description: `Coordenadas actualizadas para ${search}`,
-        });
-      } else {
-        toast({
-          title: "Error",
-          description: "No se encontró la ubicación especificada",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      console.error('Error geocoding:', error);
-      toast({
-        title: "Error",
-        description: "No se pudo convertir la dirección en coordenadas",
-        variant: "destructive",
-      });
-    }
-  };
 
   const handleGeolocation = () => {
     setLoading(true);
@@ -362,18 +157,6 @@ const Index = () => {
     }
   };
 
-  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
-    const R = 6371; // Radio de la Tierra en km
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a = 
-      Math.sin(dLat/2) * Math.sin(dLat/2) +
-      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-      Math.sin(dLon/2) * Math.sin(dLon/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    return R * c;
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -387,43 +170,41 @@ const Index = () => {
           </p>
         </div>
 
-        <Card className="p-6 shadow-lg bg-white/80 backdrop-blur-sm mb-6">
+        <Card className="p-6 shadow-lg bg-white/80 backdrop-blur-sm">
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-700">
-                  Origen (Ciudad o dirección)
+                  Latitud
                 </label>
                 <div className="relative">
                   <Input
                     type="text"
-                    value={locationSearch}
-                    onChange={(e) => setLocationSearch(e.target.value)}
-                    placeholder="Ej: Madrid, Plaza Mayor"
+                    value={location.lat}
+                    onChange={(e) =>
+                      setLocation((prev) => ({ ...prev, lat: e.target.value }))
+                    }
+                    placeholder="Ingresa la latitud"
                     className="pl-10"
                   />
-                  <Search 
-                    className="absolute left-3 top-2.5 h-5 w-5 text-gray-400 cursor-pointer"
-                    onClick={() => handleGeocodeLocation(locationSearch, false)}
-                  />
+                  <MapPin className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
                 </div>
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-700">
-                  Destino (Ciudad o dirección)
+                  Longitud
                 </label>
                 <div className="relative">
                   <Input
                     type="text"
-                    value={destinationSearch}
-                    onChange={(e) => setDestinationSearch(e.target.value)}
-                    placeholder="Ej: Barcelona, Sagrada Familia"
+                    value={location.lng}
+                    onChange={(e) =>
+                      setLocation((prev) => ({ ...prev, lng: e.target.value }))
+                    }
+                    placeholder="Ingresa la longitud"
                     className="pl-10"
                   />
-                  <Search 
-                    className="absolute left-3 top-2.5 h-5 w-5 text-gray-400 cursor-pointer"
-                    onClick={() => handleGeocodeLocation(destinationSearch, true)}
-                  />
+                  <MapPin className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
                 </div>
               </div>
             </div>
@@ -439,7 +220,7 @@ const Index = () => {
                 ) : (
                   <>
                     <MapPin className="mr-2 h-4 w-4" />
-                    Usar mi ubicación como origen
+                    Usar mi ubicación
                   </>
                 )}
               </Button>
@@ -457,6 +238,10 @@ const Index = () => {
                   <SelectItem value="dieselplus">Diésel Plus</SelectItem>
                 </SelectContent>
               </Select>
+              <Button variant="outline" className="flex-1">
+                <Filter className="mr-2 h-4 w-4" />
+                Más filtros
+              </Button>
             </div>
 
             <div className="flex flex-col sm:flex-row gap-4">
@@ -478,11 +263,6 @@ const Index = () => {
               </Button>
             </div>
           </div>
-        </Card>
-
-        {/* Mapa */}
-        <Card className="p-6 shadow-lg bg-white/80 backdrop-blur-sm mb-6">
-          <div ref={mapContainer} className="w-full h-[500px] rounded-lg" />
         </Card>
 
         <div className="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
