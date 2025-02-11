@@ -30,10 +30,15 @@ const Index = () => {
   const [stations, setStations] = useState<FuelStation[]>([]);
   const [filteredStations, setFilteredStations] = useState<FuelStation[]>([]);
   const [selectedFuel, setSelectedFuel] = useState("gasolina95");
+  const [selectedBrand, setSelectedBrand] = useState<string>("todas");
   const [routeCoordinates, setRouteCoordinates] = useState<number[][]>();
   const [selectedStation, setSelectedStation] = useState<FuelStation>();
   const [userLocation, setUserLocation] = useState<[number, number]>();
   const { toast } = useToast();
+
+  // Get unique brands from stations
+  const uniqueBrands = Array.from(new Set(stations.map(station => station.Rótulo)))
+    .sort((a, b) => a.localeCompare(b));
 
   useEffect(() => {
     const loadStations = async () => {
@@ -58,6 +63,15 @@ const Index = () => {
 
     loadStations();
   }, [toast]);
+
+  // Apply brand filter to filtered stations
+  useEffect(() => {
+    if (selectedBrand === "todas") return;
+    
+    setFilteredStations(prev => 
+      prev.filter(station => station.Rótulo === selectedBrand)
+    );
+  }, [selectedBrand]);
 
   const handleCalculateRoute = async () => {
     if (!origin || !destination) {
@@ -118,10 +132,15 @@ const Index = () => {
           return aMinDist - bMinDist;
         });
         
-        setFilteredStations(sortedStations);
+        // Apply brand filter if selected
+        const finalStations = selectedBrand === "todas" 
+          ? sortedStations 
+          : sortedStations.filter(station => station.Rótulo === selectedBrand);
+
+        setFilteredStations(finalStations);
         toast({
           title: "Ruta calculada",
-          description: `Se encontraron ${sortedStations.length} gasolineras cerca de la ruta`,
+          description: `Se encontraron ${finalStations.length} gasolineras cerca de la ruta`,
         });
       }
     } catch (error) {
@@ -165,12 +184,17 @@ const Index = () => {
             return distA - distB;
           });
 
-          setFilteredStations(nearbyStations);
+          // Apply brand filter if selected
+          const filteredNearbyStations = selectedBrand === "todas" 
+            ? nearbyStations 
+            : nearbyStations.filter(station => station.Rótulo === selectedBrand);
+
+          setFilteredStations(filteredNearbyStations);
           setRouteCoordinates([[userLng, userLat]]); // Center map on user location
           
           toast({
             title: "Ubicación encontrada",
-            description: `Se encontraron ${nearbyStations.length} gasolineras en un radio de 10km`,
+            description: `Se encontraron ${filteredNearbyStations.length} gasolineras en un radio de 10km`,
           });
           setLoading(false);
         },
@@ -295,6 +319,24 @@ const Index = () => {
                   <SelectItem value="dieselplus">Diésel Plus</SelectItem>
                 </SelectContent>
               </Select>
+
+              <Select
+                value={selectedBrand}
+                onValueChange={setSelectedBrand}
+              >
+                <SelectTrigger className="flex-1">
+                  <SelectValue placeholder="Filtrar por empresa" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todas">Todas las empresas</SelectItem>
+                  {uniqueBrands.map(brand => (
+                    <SelectItem key={brand} value={brand}>
+                      {brand}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
               <Button
                 onClick={handleCalculateRoute}
                 className="flex-1 bg-blue-500 hover:bg-blue-600 text-white"
@@ -399,3 +441,4 @@ const Index = () => {
 };
 
 export default Index;
+
