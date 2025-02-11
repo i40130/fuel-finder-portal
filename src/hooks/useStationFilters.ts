@@ -27,13 +27,23 @@ export const useStationFilters = (
       return;
     }
 
-    // Filtrar estaciones que tienen el precio del combustible seleccionado
-    const stationsWithFuel = filteredStations.filter(station => {
-      const price = getFuelPrice(station, selectedFuel);
-      return price !== "No disponible";
-    });
+    // Usar la misma lista de estaciones que ya está filtrada
+    const cheapestStation = filteredStations.reduce((cheapest, current) => {
+      const cheapestPrice = getFuelPrice(cheapest, selectedFuel);
+      const currentPrice = getFuelPrice(current, selectedFuel);
+      
+      // Si alguno de los precios no está disponible, mantener el que sí lo está
+      if (cheapestPrice === "No disponible") return current;
+      if (currentPrice === "No disponible") return cheapest;
+      
+      const cheapestValue = parseFloat(cheapestPrice.replace(',', '.'));
+      const currentValue = parseFloat(currentPrice.replace(',', '.'));
+      
+      return currentValue < cheapestValue ? current : cheapest;
+    }, filteredStations[0]);
 
-    if (stationsWithFuel.length === 0) {
+    // Verificar si el precio está disponible para la estación más barata
+    if (getFuelPrice(cheapestStation, selectedFuel) === "No disponible") {
       toast({
         title: "Error",
         description: "No se encontraron estaciones con el combustible seleccionado",
@@ -41,12 +51,6 @@ export const useStationFilters = (
       });
       return;
     }
-
-    const cheapestStation = stationsWithFuel.reduce((cheapest, current) => {
-      const cheapestPrice = parseFloat(getFuelPrice(cheapest, selectedFuel).replace(',', '.'));
-      const currentPrice = parseFloat(getFuelPrice(current, selectedFuel).replace(',', '.'));
-      return currentPrice < cheapestPrice ? current : cheapest;
-    });
 
     setSelectedStation(cheapestStation);
     setActiveFilter("cheapest");
@@ -100,7 +104,7 @@ export const useStationFilters = (
       const distCurrent = calculateDistance(userLat, userLng, currentLat, currentLng);
       
       return distCurrent < distNearest ? current : nearest;
-    });
+    }, filteredStations[0]);
 
     setSelectedStation(nearestStation);
     setActiveFilter("nearest");
