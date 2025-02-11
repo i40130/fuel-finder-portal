@@ -41,39 +41,43 @@ const Index = () => {
     findNearestStation,
   } = useStationFilters(userLocation, filteredStations, setSelectedStation, setRouteCoordinates);
 
+  // Efecto para actualizar las estaciones cuando cambia la marca seleccionada
   useEffect(() => {
-    setSelectedBrand("todas");
-  }, [filteredStations]);
-
-  useEffect(() => {
-    if (selectedBrand === "todas") return;
+    if (!stations.length) return;
     
-    setFilteredStations(prev => 
-      stations.filter(station => {
-        if (routeCoordinates) {
-          const stationLat = parseFloat(station.Latitud.replace(',', '.'));
-          const stationLng = parseFloat(station['Longitud (WGS84)'].replace(',', '.'));
-          
-          return routeCoordinates.some(point => {
-            const distance = calculateDistance(
-              stationLat,
-              stationLng,
-              point[1],
-              point[0]
-            );
-            return distance <= 5;
-          });
-        }
-        else if (userLocation) {
-          const [userLat, userLng] = userLocation;
-          const stationLat = parseFloat(station.Latitud.replace(',', '.'));
-          const stationLng = parseFloat(station['Longitud (WGS84)'].replace(',', '.'));
-          const distance = calculateDistance(userLat, userLng, stationLat, stationLng);
-          return distance <= 10 && station.Rótulo === selectedBrand;
-        }
-        return false;
-      })
-    );
+    let filtered = stations;
+
+    if (routeCoordinates) {
+      filtered = stations.filter(station => {
+        const stationLat = parseFloat(station.Latitud.replace(',', '.'));
+        const stationLng = parseFloat(station['Longitud (WGS84)'].replace(',', '.'));
+        
+        return routeCoordinates.some(point => {
+          const distance = calculateDistance(
+            stationLat,
+            stationLng,
+            point[1],
+            point[0]
+          );
+          return distance <= 5;
+        });
+      });
+    } else if (userLocation) {
+      const [userLat, userLng] = userLocation;
+      filtered = stations.filter(station => {
+        const stationLat = parseFloat(station.Latitud.replace(',', '.'));
+        const stationLng = parseFloat(station['Longitud (WGS84)'].replace(',', '.'));
+        const distance = calculateDistance(userLat, userLng, stationLat, stationLng);
+        return distance <= 10;
+      });
+    }
+
+    // Aplicar filtro por marca si no es "todas"
+    if (selectedBrand !== "todas") {
+      filtered = filtered.filter(station => station.Rótulo === selectedBrand);
+    }
+
+    setFilteredStations(filtered);
   }, [selectedBrand, stations, routeCoordinates, userLocation]);
 
   const uniqueBrands = getAvailableBrands(routeCoordinates, userLocation);
@@ -141,4 +145,3 @@ const Index = () => {
 };
 
 export default Index;
-
