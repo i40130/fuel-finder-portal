@@ -51,25 +51,38 @@ const Map = ({ stations, routeCoordinates, selectedStation }: MapProps) => {
       const el = document.createElement('div');
       el.className = 'marker';
       
-      // Highlight selected station
+      // Highlight selected station with a larger, brighter marker
       if (selectedStation?.IDEESS === station.IDEESS) {
-        el.style.backgroundColor = '#00FF00';
-        el.style.width = '20px';
-        el.style.height = '20px';
-        el.style.border = '3px solid #000';
+        el.style.backgroundColor = '#22C55E'; // Bright green for selected
+        el.style.width = '25px';
+        el.style.height = '25px';
+        el.style.border = '3px solid #064E3B';
+        el.style.boxShadow = '0 0 10px rgba(34, 197, 94, 0.5)';
+        
+        // Center map on selected station
+        map.current?.flyTo({
+          center: [lng, lat],
+          zoom: 14,
+          duration: 1500
+        });
       } else {
-        el.style.backgroundColor = '#FF0000';
+        el.style.backgroundColor = '#EF4444'; // Red for unselected
         el.style.width = '15px';
         el.style.height = '15px';
+        el.style.border = '2px solid #7F1D1D';
       }
       el.style.borderRadius = '50%';
+      el.style.cursor = 'pointer';
+      el.style.transition = 'all 0.3s ease';
 
       const marker = new mapboxgl.Marker(el)
         .setLngLat([lng, lat])
-        .setPopup(new mapboxgl.Popup().setHTML(`
-          <h3>${station.Rótulo}</h3>
-          <p>Gasolina 95: ${station['Precio Gasolina 95 E5']}€</p>
-          <p>Diésel: ${station['Precio Gasoleo A']}€</p>
+        .setPopup(new mapboxgl.Popup({ offset: 25 }).setHTML(`
+          <div class="p-2">
+            <h3 class="font-bold">${station.Rótulo}</h3>
+            <p>Gasolina 95: ${station['Precio Gasolina 95 E5']}€</p>
+            <p>Diésel: ${station['Precio Gasoleo A']}€</p>
+          </div>
         `))
         .addTo(map.current);
 
@@ -133,3 +146,4 @@ const Map = ({ stations, routeCoordinates, selectedStation }: MapProps) => {
 };
 
 export default Map;
+

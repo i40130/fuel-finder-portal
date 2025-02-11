@@ -345,18 +345,28 @@ const Index = () => {
           {filteredStations.map((station) => (
             <Card
               key={station.IDEESS}
-              className={`p-6 hover:shadow-lg transition-shadow duration-200 cursor-pointer ${
+              className={`p-6 transition-all duration-300 cursor-pointer ${
                 selectedStation?.IDEESS === station.IDEESS 
-                  ? 'ring-2 ring-green-500 shadow-lg' 
-                  : ''
+                  ? 'ring-2 ring-green-500 shadow-xl bg-green-50 scale-105' 
+                  : 'hover:shadow-lg hover:scale-102'
               }`}
               onClick={() => handleStationClick(station)}
             >
               <div className="flex justify-between items-start mb-4">
                 <div>
-                  <h3 className="font-semibold text-lg">{station.Rótulo}</h3>
+                  <h3 className={`font-semibold text-lg ${
+                    selectedStation?.IDEESS === station.IDEESS 
+                      ? 'text-green-700' 
+                      : ''
+                  }`}>
+                    {station.Rótulo}
+                  </h3>
                 </div>
-                <Fuel className="h-6 w-6 text-teal-500" />
+                <Fuel className={`h-6 w-6 ${
+                  selectedStation?.IDEESS === station.IDEESS 
+                    ? 'text-green-500' 
+                    : 'text-teal-500'
+                }`} />
               </div>
               <div className="space-y-2">
                 <p className="text-sm text-gray-600">
