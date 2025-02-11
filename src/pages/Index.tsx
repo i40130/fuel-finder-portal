@@ -78,13 +78,13 @@ const Index = () => {
       });
     }
 
-    // Aplicar filtro por marca si no es "todas"
+    // Aplicar filtro por marca solo si no es "todas"
     if (selectedBrand !== "todas") {
-      filtered = filtered.filter(station => station.Rótulo === selectedBrand);
+      filtered = filtered.filter(station => station.Rótulo.toLowerCase() === selectedBrand.toLowerCase());
     }
 
     setFilteredStations(filtered);
-  }, [selectedBrand, stations, routeCoordinates, userLocation]);
+  }, [selectedBrand, stations, routeCoordinates, userLocation, setFilteredStations]);
 
   const uniqueBrands = getAvailableBrands(routeCoordinates, userLocation);
 
