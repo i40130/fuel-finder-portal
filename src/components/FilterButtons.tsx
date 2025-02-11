@@ -34,7 +34,7 @@ export function FilterButtons({
         disabled={loading || !filteredStations.length}
       >
         <Fuel className="mr-2 h-4 w-4" />
-        Encontrar la más barata
+        Llévame a la más barata
       </Button>
       <Button
         onClick={findNearestStation}
@@ -46,9 +46,8 @@ export function FilterButtons({
         disabled={loading || !filteredStations.length}
       >
         <MapPin className="mr-2 h-4 w-4" />
-        Encontrar la más cercana
+        Llévame a la más cercana
       </Button>
     </div>
   );
 }
-
