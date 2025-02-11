@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Search, MapPin, Fuel, Filter, Navigation } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -36,12 +35,11 @@ const Index = () => {
   const [userLocation, setUserLocation] = useState<[number, number]>();
   const { toast } = useToast();
 
-  // Get unique brands from stations that are either near the route or user location
   const getAvailableBrands = () => {
     const availableStations = stations.filter(station => {
       const stationLat = parseFloat(station.Latitud.replace(',', '.'));
       const stationLng = parseFloat(station['Longitud (WGS84)'].replace(',', '.'));
-
+      
       if (routeCoordinates) {
         return routeCoordinates.some(point => {
           const distance = calculateDistance(
@@ -64,7 +62,6 @@ const Index = () => {
       .sort((a, b) => a.localeCompare(b));
   };
 
-  // Get unique brands that are currently available
   const uniqueBrands = getAvailableBrands();
 
   useEffect(() => {
@@ -91,18 +88,15 @@ const Index = () => {
     loadStations();
   }, [toast]);
 
-  // Reset selected brand when filtered stations change
   useEffect(() => {
     setSelectedBrand("todas");
   }, [filteredStations]);
 
-  // Apply brand filter to filtered stations
   useEffect(() => {
     if (selectedBrand === "todas") return;
     
     setFilteredStations(prev => 
       stations.filter(station => {
-        // Si hay una ruta calculada, filtramos por cercanía a la ruta
         if (routeCoordinates) {
           const stationLat = parseFloat(station.Latitud.replace(',', '.'));
           const stationLng = parseFloat(station['Longitud (WGS84)'].replace(',', '.'));
@@ -117,7 +111,6 @@ const Index = () => {
             return distance <= 5 && station.Rótulo === selectedBrand;
           });
         }
-        // Si estamos usando ubicación del usuario, filtramos por cercanía al usuario
         else if (userLocation) {
           const [userLat, userLng] = userLocation;
           const stationLat = parseFloat(station.Latitud.replace(',', '.'));
@@ -157,12 +150,10 @@ const Index = () => {
       const route = await getRoute(originCoords, destCoords);
       if (route) {
         setRouteCoordinates(route);
-        // Filter stations near the route
         const routeStations = stations.filter(station => {
           const stationLat = parseFloat(station.Latitud.replace(',', '.'));
           const stationLng = parseFloat(station['Longitud (WGS84)'].replace(',', '.'));
           
-          // Check if station is within 5km of any point in the route
           return route.some(point => {
             const distance = calculateDistance(
               stationLat,
@@ -174,7 +165,6 @@ const Index = () => {
           });
         });
 
-        // Sort stations by distance along the route
         const sortedStations = routeStations.sort((a, b) => {
           const aLat = parseFloat(a.Latitud.replace(',', '.'));
           const aLng = parseFloat(a['Longitud (WGS84)'].replace(',', '.'));
@@ -189,7 +179,6 @@ const Index = () => {
           return aMinDist - bMinDist;
         });
         
-        // Apply brand filter if selected
         const finalStations = selectedBrand === "todas" 
           ? sortedStations 
           : sortedStations.filter(station => station.Rótulo === selectedBrand);
@@ -212,8 +201,41 @@ const Index = () => {
     }
   };
 
-  const handleStationClick = (station: FuelStation) => {
+  const handleStationClick = async (station: FuelStation) => {
     setSelectedStation(station);
+    
+    if (userLocation) {
+      const stationLat = parseFloat(station.Latitud.replace(',', '.'));
+      const stationLng = parseFloat(station['Longitud (WGS84)'].replace(',', '.'));
+      
+      try {
+        const route = await getRoute(
+          [userLocation[1], userLocation[0]], // [lng, lat] para el origen
+          [stationLng, stationLat] // [lng, lat] para el destino
+        );
+        
+        if (route) {
+          setRouteCoordinates(route);
+          toast({
+            title: "Ruta calculada",
+            description: `Se ha calculado la ruta hasta ${station.Rótulo}`,
+          });
+        }
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "No se pudo calcular la ruta hasta la gasolinera",
+          variant: "destructive",
+        });
+        console.error('Error calculating route:', error);
+      }
+    } else {
+      toast({
+        title: "Ubicación necesaria",
+        description: "Activa tu ubicación para calcular la ruta hasta la gasolinera",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleGetUserLocation = () => {
@@ -241,7 +263,6 @@ const Index = () => {
             return distA - distB;
           });
 
-          // Apply brand filter if selected
           const filteredNearbyStations = selectedBrand === "todas" 
             ? nearbyStations 
             : nearbyStations.filter(station => station.Rótulo === selectedBrand);
