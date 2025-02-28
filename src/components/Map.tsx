@@ -20,7 +20,7 @@ const Map = ({ stations, routeCoordinates, selectedStation, userLocation }: MapP
   useEffect(() => {
     if (!mapContainer.current || map.current) return;
 
-    mapboxgl.accessToken = 'pk.eyJ1IjoianVhbmJhLWVzY3JpZyIsImEiOiJjbTcwYnJvOTcwMGQ1MmlzN2R4bzh4eXRhIn0.77pvZCAPAEWReY12K0mBPg';
+    mapboxgl.accessToken = 'tu_TOKEN_de_MAPBOXGL';
     
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
